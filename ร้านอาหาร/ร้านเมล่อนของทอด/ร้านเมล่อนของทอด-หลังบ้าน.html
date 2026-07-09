@@ -8,7 +8,6 @@
 <style>
 :root {
   --cream:     #FDF6EC;
-  --warm:      #F5E6CC;
   --terra:     #C8522A;
   --terra-dk:  #A8391A;
   --amber:     #E8912A;
@@ -32,13 +31,9 @@ body { font-family: 'Sarabun', sans-serif; background: var(--cream); color: var(
 .order-list { display: flex; flex-direction: column; gap: 12px; }
 .order-card { background: var(--white); border: 1px solid var(--border); border-radius: 14px; padding: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.03); position: relative; }
 .order-id { position: absolute; right: 16px; top: 16px; font-size: 0.75rem; color: var(--muted); background: var(--cream); padding: 2px 8px; border-radius: 10px; }
-
-/* การตกแต่งสไตล์รายการสินค้าในตะกร้า */
 .basket-box { background: var(--cream); padding: 10px; border-radius: 8px; margin: 8px 0 12px; border: 1px solid var(--border); }
 .basket-item { font-size: 0.95rem; font-weight: 700; color: var(--ink); margin-bottom: 4px; display: flex; justify-content: space-between; }
-.basket-item:last-child { margin-bottom: 0; }
 .basket-qty { color: var(--terra); font-weight: 800; }
-
 .order-cust { font-size: 0.85rem; color: var(--muted); margin-bottom: 8px; font-weight: 500; }
 .btn-action { width: 100%; border: none; padding: 10px; border-radius: 10px; font-family: 'Sarabun'; font-weight: 600; font-size: 0.9rem; cursor: pointer; color: #fff; }
 .btn-start { background: var(--amber); }
@@ -48,34 +43,17 @@ body { font-family: 'Sarabun', sans-serif; background: var(--cream); color: var(
 </head>
 <body>
 
-<div class="header">
-  <h2>🧑‍🍳 แผงจัดการออเดอร์แบบชุดตะกร้า (ร้านที่ 1)</h2>
-</div>
+<div class="header"><h2>🧑‍🍳 แผงจัดการออเดอร์แบบชุดตะกร้า</h2></div>
 
 <div class="stats-bar">
-  <div class="stat-card">
-    <div class="stat-label">⏳ ตะกร้ารอทำ</div>
-    <div class="stat-val" id="countWaiting">0</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-label">🍳 กำลังทำ</div>
-    <div class="stat-val" id="countCooking">0</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-label">✅ เสร็จวันนี้ (แยกตามตะกร้า)</div>
-    <div class="stat-val" id="countCompleted" style="color: var(--sage)">0</div>
-  </div>
+  <div class="stat-card"><div class="stat-label">⏳ ตะกร้ารอทำ</div><div class="stat-val" id="countWaiting">0</div></div>
+  <div class="stat-card"><div class="stat-label">🍳 กำลังทำ</div><div class="stat-val" id="countCooking">0</div></div>
+  <div class="stat-card"><div class="stat-label">✅ เสร็จวันนี้</div><div class="stat-val" id="countCompleted" style="color: var(--sage)">0</div></div>
 </div>
 
 <div class="grid">
-  <div class="col">
-    <div class="col-title">📥 รายการตะกร้ารอทำ</div>
-    <div class="order-list" id="listWaiting"></div>
-  </div>
-  <div class="col">
-    <div class="col-title">🔥 กำลังปรุงอาหาร</div>
-    <div class="order-list" id="listCooking"></div>
-  </div>
+  <div class="col"><div class="col-title">📥 รายการตะกร้ารอทำ</div><div class="order-list" id="listWaiting"></div></div>
+  <div class="col"><div class="col-title">🔥 กำลังปรุงอาหาร</div><div class="order-list" id="listCooking"></div></div>
 </div>
 
 <script type="module">
@@ -84,104 +62,49 @@ import { getFirestore, collection, onSnapshot, doc, updateDoc } from "https://ww
 
 const app = initializeApp({
   apiKey: "AIzaSyAGg-Xsst8kkL0DyZ6Ay4o3dnmBg6pVps0",
-  authDomain: "uniqueue-1e6a9.firebaseapp.com",
   projectId: "uniqueue-1e6a9",
+  authDomain: "uniqueue-1e6a9.firebaseapp.com",
   storageBucket: "uniqueue-1e6a9.firebasestorage.app",
   messagingSenderId: "704755349414",
   appId: "1:704755349414:web:119ff42eef7ff0bcc98167"
 });
 const db = getFirestore(app);
-
 const BOT = "8323462769:AAEmNAEfekbPLnyG249X-W519mb20onsFnA";
 const COLLECTION_NAME = "orders_shop1";
 
-// ฟังก์ชันปรับปรุงสถานะออเดอร์ทั้งตะกร้า
 window.updateBasketStatus = async (id, currentStatus, tgId, itemsJson, customer) => {
   const nextStatus = currentStatus === 'waiting' ? 'cooking' : 'completed';
   const items = JSON.parse(decodeURIComponent(itemsJson));
-  
   try {
     await updateDoc(doc(db, COLLECTION_NAME, id), { status: nextStatus });
-    
-    // จัดรูปแบบข้อความแจ้งเตือนรวมทุกเมนูในตะกร้า
-    let itemsTxt = "";
-    items.forEach(item => {
-      itemsTxt += `- ${item.menu} (${item.qty} ชิ้น)\n`;
-    });
-
-    let msg = "";
-    if (nextStatus === 'cooking') {
-      msg = encodeURIComponent(`🍳 ร้านค้ากำลังเริ่มทำอาหารตามรายการในตะกร้าของคุณแล้วครับ!\n\nรายการปรุง:\n${itemsTxt}`);
-    } else if (nextStatus === 'completed') {
-      msg = encodeURIComponent(`🔔 ตะกร้าอาหารเสร็จเรียบร้อยแล้วจ้า!\nคุณ ${customer} มารับของที่สั่งได้เลยครับ!\n\nรายการรับอาหาร:\n${itemsTxt}🎉`);
+    let itemsTxt = items.map(i => `- ${i.menu} (${i.qty} ชิ้น)`).join('\n');
+    let msg = nextStatus === 'cooking' 
+      ? `🍳 ร้านเริ่มทำอาหารในตะกร้าคุณแล้ว!\n${itemsTxt}` 
+      : `🔔 ตะกร้าอาหารเสร็จแล้ว! คุณ ${customer} มารับได้เลยครับ!\n${itemsTxt} 🎉`;
+    if (tgId && tgId !== 'undefined' && tgId !== 'null') {
+      await fetch(`https://api.telegram.org/bot${BOT}/sendMessage?chat_id=${tgId}&text=${encodeURIComponent(msg)}`);
     }
-    
-    if (tgId && tgId !== 'undefined') {
-      await fetch(`https://api.telegram.org/bot${BOT}/sendMessage?chat_id=${tgId}&text=${msg}`);
-    }
-  } catch (e) {
-    alert("เกิดข้อผิดพลาดในการอัปเดตระบบ: " + e.message);
-  }
+  } catch (e) { alert("เกิดข้อผิดพลาด: " + e.message); }
 };
 
 onSnapshot(collection(db, COLLECTION_NAME), snap => {
-  let waitingHtml = '', cookingHtml = '';
-  let numWaiting = 0, numCooking = 0, numCompleted = 0;
-
-  const todayStart = new Date();
-  todayStart.setHours(0,0,0,0);
-
+  let waitingHtml = '', cookingHtml = '', nWait=0, nCook=0, nComp=0;
   snap.forEach(d => {
     const data = d.data();
     const id = d.id;
-    const orderTime = data.timestamp ? data.timestamp.toDate() : new Date();
-
-    if (orderTime >= todayStart) {
-      // ตรวจสอบโครงสร้างข้อมูลตะกร้าแบบใหม่
-      const itemsList = data.items || [];
-      let itemsRenderHtml = '<div class="basket-box">';
-      itemsList.forEach(item => {
-        itemsRenderHtml += `
-          <div class="basket-item">
-            <span>🔸 ${item.menu}</span>
-            <span class="basket-qty">x ${item.qty}</span>
-          </div>`;
-      });
-      itemsRenderHtml += '</div>';
-
-      // เข้ารหัสข้อมูลส่งผ่านปุ่มฟังก์ชัน
-      const itemsJsonStr = encodeURIComponent(JSON.stringify(itemsList));
-
-      if (data.status === 'waiting') {
-        numWaiting++;
-        waitingHtml += `
-          <div class="order-card">
-            <span class="order-id">#${id.substring(0,5)}</span>
-            <div class="order-cust">👤 ตะกร้าของคุณ: <b>${data.customer}</b> (💰 ฿${data.price} - จ่ายแล้ว)</div>
-            ${itemsRenderHtml}
-            <button class="btn-action btn-start" onclick="updateBasketStatus('${id}', 'waiting', '${data.telegramId}', '${itemsJsonStr}', '${data.customer}')">🍳 เริ่มทำทั้งตะกร้า</button>
-          </div>`;
-      } else if (data.status === 'cooking') {
-        numCooking++;
-        cookingHtml += `
-          <div class="order-card">
-            <span class="order-id">#${id.substring(0,5)}</span>
-            <div class="order-cust">👤 ตะกร้าของคุณ: <b>${data.customer}</b></div>
-            ${itemsRenderHtml}
-            <button class="btn-action btn-done" onclick="updateBasketStatus('${id}', 'cooking', '${data.telegramId}', '${itemsJsonStr}', '${data.customer}')">✅ เสร็จทั้งตะกร้า - เรียกรับ</button>
-          </div>`;
-      } else if (data.status === 'completed') {
-        numCompleted++;
-      }
-    }
+    if (data.status === 'waiting') {
+      nWait++;
+      waitingHtml += `<div class="order-card"><span class="order-id">#${id.substring(0,5)}</span><div class="order-cust">👤 <b>${data.customer}</b></div><div class="basket-box">${data.items.map(i => `<div class="basket-item"><span>🔸 ${i.menu}</span><span class="basket-qty">x ${i.qty}</span></div>`).join('')}</div><button class="btn-action btn-start" onclick="updateBasketStatus('${id}', 'waiting', '${data.telegramId}', '${encodeURIComponent(JSON.stringify(data.items))}', '${data.customer}')">🍳 เริ่มทำทั้งตะกร้า</button></div>`;
+    } else if (data.status === 'cooking') {
+      nCook++;
+      cookingHtml += `<div class="order-card"><span class="order-id">#${id.substring(0,5)}</span><div class="order-cust">👤 <b>${data.customer}</b></div><div class="basket-box">${data.items.map(i => `<div class="basket-item"><span>🔸 ${i.menu}</span><span class="basket-qty">x ${i.qty}</span></div>`).join('')}</div><button class="btn-action btn-done" onclick="updateBasketStatus('${id}', 'cooking', '${data.telegramId}', '${encodeURIComponent(JSON.stringify(data.items))}', '${data.customer}')">✅ เสร็จทั้งตะกร้า - เรียกรับ</button></div>`;
+    } else if (data.status === 'completed') { nComp++; }
   });
-
-  document.getElementById('countWaiting').textContent = numWaiting;
-  document.getElementById('countCooking').textContent = numCooking;
-  document.getElementById('countCompleted').textContent = numCompleted;
-
-  document.getElementById('listWaiting').innerHTML = waitingHtml || '<div class="empty-msg">💤 ไม่มีคิวตะกร้ารอทำขณะนี้</div>';
-  document.getElementById('listCooking').innerHTML = cookingHtml || '<div class="empty-msg">🍳 ยังไม่มีเมนูกำลังทำอยู่</div>';
+  document.getElementById('countWaiting').textContent = nWait;
+  document.getElementById('countCooking').textContent = nCook;
+  document.getElementById('countCompleted').textContent = nComp;
+  document.getElementById('listWaiting').innerHTML = waitingHtml || '<div class="empty-msg">💤 ว่างเปล่า</div>';
+  document.getElementById('listCooking').innerHTML = cookingHtml || '<div class="empty-msg">🍳 ว่างเปล่า</div>';
 });
 </script>
 </body>

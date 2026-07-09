@@ -5,22 +5,56 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ชำระเงิน – UniQueue</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
+        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js";
+
+        // --- ใส่ CONFIG ของคุณที่นี่ ---
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+        // --------------------------
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        window.db = db; // ทำให้เรียกใช้ในฟังก์ชันได้
+    </script>
     <style>
         body { font-family: 'Sarabun', sans-serif; background: #FDF6EC; padding: 20px; color: #2C1810; }
         .container { max-width: 500px; margin: 0 auto; background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         h1 { color: #C8522A; text-align: center; }
         .order-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
         .total-price { font-size: 1.5rem; font-weight: 700; color: #C8522A; text-align: center; margin: 20px 0; }
-        .btn { display: block; width: 100%; background: #C8522A; color: white; padding: 15px; border-radius: 10px; text-align: center; text-decoration: none; font-weight: 600; border: none; cursor: pointer; }
+        .method-box { background: #f9f9f9; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
+        .btn { display: block; width: 100%; background: #C8522A; color: white; padding: 15px; border-radius: 10px; text-align: center; text-decoration: none; font-weight: 600; border: none; cursor: pointer; margin-top: 10px; }
+        #qrCodeArea { display: none; text-align: center; margin-top: 15px; }
+        img.qr { width: 200px; border: 2px solid #E8D5BC; border-radius: 10px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>ยืนยันการชำระเงิน</h1>
-        <div id="paymentDetails">กำลังโหลดรายการของร้านค้า...</div>
+        <div id="paymentDetails">กำลังโหลดรายการ...</div>
         <div class="total-price" id="totalDisplay">฿0</div>
-        <button class="btn" onclick="alert('ระบบชำระเงินจำลอง: ดำเนินการเสร็จสิ้น!')">ยืนยันโอนเงิน</button>
-        <button class="btn" style="background:#9C8070; margin-top:10px;" onclick="history.back()">กลับไปแก้ไข</button>
+
+        <div class="method-box">
+            <label><strong>เลือกวิธีการชำระเงิน:</strong></label><br>
+            <input type="radio" name="payMethod" value="transfer" onclick="togglePay(true)" checked> โอนเงิน (แสดง QR)<br>
+            <input type="radio" name="payMethod" value="cash" onclick="togglePay(false)"> จ่ายเงินสดที่ร้าน
+        </div>
+
+        <div id="qrCodeArea">
+            <p>แสกนเพื่อโอนเงิน:</p>
+            <img src="https://via.placeholder.com/200?text=QR+Code+ร้านค้า" class="qr" alt="QR Code">
+        </div>
+
+        <button class="btn" onclick="confirmOrder()">ยืนยันออเดอร์</button>
+        <button class="btn" style="background:#9C8070;" onclick="history.back()">กลับไปแก้ไข</button>
     </div>
 
     <script>
@@ -31,24 +65,55 @@
         function loadPaymentInfo() {
             const cart = JSON.parse(localStorage.getItem(CART_KEY)) || [];
             const shopItems = cart.filter(item => item.shopId == targetShopId);
-            
             if (shopItems.length === 0) {
                 document.getElementById('paymentDetails').innerHTML = "ไม่พบรายการของร้านนี้";
                 return;
             }
-
             let html = `<h3>ร้าน: ${shopItems[0].shopName}</h3>`;
             let total = 0;
             shopItems.forEach(item => {
                 total += (item.price * item.qty);
                 html += `<div class="order-item"><span>${item.menu} x ${item.qty}</span> <span>฿${item.price * item.qty}</span></div>`;
             });
-            
             document.getElementById('paymentDetails').innerHTML = html;
             document.getElementById('totalDisplay').textContent = "ยอดรวม: ฿" + total;
         }
 
+        function togglePay(showQr) {
+            document.getElementById('qrCodeArea').style.display = showQr ? 'block' : 'none';
+        }
+
+        async function confirmOrder() {
+            const cart = JSON.parse(localStorage.getItem(CART_KEY)) || [];
+            const shopItems = cart.filter(item => item.shopId == targetShopId);
+            const total = shopItems.reduce((sum, item) => sum + (item.price * item.qty), 0);
+
+            const orderData = {
+                shopId: targetShopId,
+                items: shopItems,
+                price: total,
+                status: "waiting",
+                paymentMethod: document.querySelector('input[name="payMethod"]:checked').value,
+                timestamp: new Date()
+            };
+
+            try {
+                // บันทึกลง Firestore ใน Collection 'orders'
+                await addDoc(collection(window.db, "orders"), orderData);
+                
+                // ลบเฉพาะของร้านนี้ออกจากตะกร้า
+                const remaining = cart.filter(item => item.shopId != targetShopId);
+                localStorage.setItem(CART_KEY, JSON.stringify(remaining));
+                
+                alert('ออเดอร์ถูกส่งไปยังร้านค้าแล้ว!');
+                window.location.href = "index.html";
+            } catch (e) {
+                alert('เกิดข้อผิดพลาด: ' + e.message);
+            }
+        }
+
         loadPaymentInfo();
+        togglePay(true);
     </script>
 </body>
 </html>
