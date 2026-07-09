@@ -612,7 +612,21 @@ window.addEventListener('pageshow', function(event) {
     renderCartItems();
 });
 
-function submitLogin() {
+// 🚫 เช็คว่าผู้ใช้ที่ล็อกอินค้างไว้ใน localStorage โดนแอดมินระงับบัญชีไปหรือยัง (เช็คตอนโหลดหน้าเสร็จ)
+window.addEventListener('load', function() {
+    if (currentUser && window.__checkUserStillAllowed) {
+        window.__checkUserStillAllowed(currentUser.uid).then(function(allowed) {
+            if (!allowed) {
+                alert('🚫 บัญชีของคุณถูกระงับสิทธิ์การสั่งอาหารโดยแอดมิน กรุณาติดต่อเจ้าหน้าที่');
+                localStorage.removeItem('uniQueueUser');
+                currentUser = null;
+                checkAppState();
+            }
+        });
+    }
+});
+
+async function submitLogin() {
     const nameInput = document.getElementById('username').value.trim();
     const telegramIdInput = document.getElementById('tgId').value.trim();
 
@@ -626,14 +640,31 @@ function submitLogin() {
         return;
     }
 
-    currentUser = {
-        uid: "USER_" + Date.now(),
-        displayName: nameInput,
-        telegramChatId: telegramIdInput
-    };
+    const submitBtn = document.querySelector('.btn-submit');
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.innerText = '⏳ กำลังตรวจสอบ...'; }
 
-    localStorage.setItem('uniQueueUser', JSON.stringify(currentUser));
-    checkAppState(); 
+    try {
+        const result = await window.__loginOrUpdateUser(nameInput, telegramIdInput);
+
+        if (!result.allowed) {
+            alert('🚫 ' + result.reason);
+            return;
+        }
+
+        currentUser = {
+            uid: result.uid,
+            displayName: nameInput,
+            telegramChatId: telegramIdInput
+        };
+
+        localStorage.setItem('uniQueueUser', JSON.stringify(currentUser));
+        checkAppState();
+    } catch (err) {
+        console.error(err);
+        alert('❌ เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง (ตรวจสอบการเชื่อมต่ออินเทอร์เน็ต)');
+    } finally {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = 'เข้าสู่ระบบเพื่อเลือกหน้าร้าน'; }
+    }
 }
 
 function logout() {
@@ -647,7 +678,7 @@ function logout() {
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, doc, getDocs, setDoc, query, orderBy, onSnapshot }
+import { getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, query, orderBy, onSnapshot }
   from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const app = initializeApp({
@@ -660,7 +691,39 @@ const app = initializeApp({
 });
 const db = getFirestore(app);
 const shopsCol = collection(db, "shops");
+const usersCol = collection(db, "users");
 const FALLBACK_IMG = 'https://media.tenor.com/On7kvXvQM5AAAAAj/ramen-noodle.gif';
+
+// 👤 ตรวจสอบสถานะบัญชี (โดนระงับหรือไม่) จาก Telegram Chat ID ก่อนอนุญาตให้ล็อกอิน
+// คืนค่า: { allowed: true/false, reason: '...' }
+window.__loginOrUpdateUser = async (name, telegramChatId) => {
+  const uid = "USER_" + telegramChatId;
+  const ref = doc(db, "users", uid);
+  const snap = await getDoc(ref);
+
+  if (snap.exists() && snap.data().status === 'suspended') {
+    return { allowed: false, uid, reason: 'บัญชีนี้ถูกระงับสิทธิ์การสั่งอาหารโดยแอดมิน กรุณาติดต่อเจ้าหน้าที่' };
+  }
+
+  if (snap.exists()) {
+    await updateDoc(ref, { name, lastLogin: Date.now() });
+  } else {
+    await setDoc(ref, { name, telegramChatId, status: 'active', lastLogin: Date.now() });
+  }
+  return { allowed: true, uid };
+};
+
+// 🔁 ใช้ตอนโหลดหน้าเว็บ กรณีมีผู้ใช้ล็อกอินค้างอยู่ใน localStorage อยู่แล้ว เผื่อโดนระงับไปหลังล็อกอินครั้งก่อน
+window.__checkUserStillAllowed = async (uid) => {
+  try {
+    const snap = await getDoc(doc(db, "users", uid));
+    if (snap.exists() && snap.data().status === 'suspended') return false;
+    return true;
+  } catch (e) {
+    console.error("check ban status error:", e);
+    return true; // ถ้าเช็คไม่ได้ ไม่บล็อกผู้ใช้ (กันเน็ตหลุดแล้วเข้าเว็บไม่ได้)
+  }
+};
 
 // 🌱 กันเหนียว: ถ้ายังไม่เคยมีใครเปิด admin.html มาก่อนเลย (Firestore ยังว่าง) ให้ index.html seed ข้อมูลเริ่มต้นเองได้
 const SEED_SHOPS = [
