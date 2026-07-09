@@ -6,18 +6,7 @@
 <title>UniQueue Manager – แผงควบคุมตะกร้าร้านค้า</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root {
-  --cream:     #FDF6EC;
-  --terra:     #C8522A;
-  --terra-dk:  #A8391A;
-  --amber:     #E8912A;
-  --sage:      #7A9E7E;
-  --ink:       #2C1810;
-  --muted:     #9C8070;
-  --border:    #E8D5BC;
-  --white:     #FFFFFF;
-  --r:         18px;
-}
+:root { --cream: #FDF6EC; --terra: #C8522A; --terra-dk: #A8391A; --amber: #E8912A; --sage: #7A9E7E; --ink: #2C1810; --muted: #9C8070; --border: #E8D5BC; --white: #FFFFFF; --r: 18px; }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Sarabun', sans-serif; background: var(--cream); color: var(--ink); padding: 20px; }
 .header { max-width: 1000px; margin: 0 auto 20px; display: flex; justify-content: space-between; align-items: center; }
@@ -43,10 +32,10 @@ body { font-family: 'Sarabun', sans-serif; background: var(--cream); color: var(
 </head>
 <body>
 
-<div class="header"><h2>🧑‍🍳 แผงจัดการออเดอร์แบบชุดตะกร้า</h2></div>
+<div class="header"><h2>🧑‍🍳 แผงจัดการออเดอร์ (ร้านเมล่อน)</h2></div>
 
 <div class="stats-bar">
-  <div class="stat-card"><div class="stat-label">⏳ ตะกร้ารอทำ</div><div class="stat-val" id="countWaiting">0</div></div>
+  <div class="stat-card"><div class="stat-label">⏳ รอทำ</div><div class="stat-val" id="countWaiting">0</div></div>
   <div class="stat-card"><div class="stat-label">🍳 กำลังทำ</div><div class="stat-val" id="countCooking">0</div></div>
   <div class="stat-card"><div class="stat-label">✅ เสร็จวันนี้</div><div class="stat-val" id="countCompleted" style="color: var(--sage)">0</div></div>
 </div>
@@ -58,7 +47,7 @@ body { font-family: 'Sarabun', sans-serif; background: var(--cream); color: var(
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, onSnapshot, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, doc, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const app = initializeApp({
   apiKey: "AIzaSyAGg-Xsst8kkL0DyZ6Ay4o3dnmBg6pVps0",
@@ -77,27 +66,37 @@ window.updateBasketStatus = async (id, currentStatus, tgId, itemsJson, customer)
   const items = JSON.parse(decodeURIComponent(itemsJson));
   try {
     await updateDoc(doc(db, COLLECTION_NAME, id), { status: nextStatus });
+    
     let itemsTxt = items.map(i => `- ${i.menu} (${i.qty} ชิ้น)`).join('\n');
     let msg = nextStatus === 'cooking' 
       ? `🍳 ร้านเริ่มทำอาหารในตะกร้าคุณแล้ว!\n${itemsTxt}` 
-      : `🔔 ตะกร้าอาหารเสร็จแล้ว! คุณ ${customer} มารับได้เลยครับ!\n${itemsTxt} 🎉`;
-    if (tgId && tgId !== 'undefined' && tgId !== 'null') {
+      : `🔔 ตะกร้าอาหารเสร็จแล้ว! คุณ ${customer || 'ลูกค้า'} มารับได้เลยครับ!\n${itemsTxt} 🎉`;
+    
+    if (tgId && tgId !== 'undefined' && tgId !== 'null' && tgId !== '') {
       await fetch(`https://api.telegram.org/bot${BOT}/sendMessage?chat_id=${tgId}&text=${encodeURIComponent(msg)}`);
     }
   } catch (e) { alert("เกิดข้อผิดพลาด: " + e.message); }
 };
 
-onSnapshot(collection(db, COLLECTION_NAME), snap => {
+// ใช้ query เพื่อเรียงลำดับออเดอร์ใหม่ล่าสุดขึ้นก่อน
+const q = query(collection(db, COLLECTION_NAME), orderBy("timestamp", "desc"));
+
+onSnapshot(q, snap => {
   let waitingHtml = '', cookingHtml = '', nWait=0, nCook=0, nComp=0;
   snap.forEach(d => {
     const data = d.data();
     const id = d.id;
+    // ตรวจสอบข้อมูลเบื้องต้น
+    const itemsList = data.items || [];
+    const customer = data.customer || 'ไม่ระบุชื่อ';
+    const itemsJsonStr = encodeURIComponent(JSON.stringify(itemsList));
+
     if (data.status === 'waiting') {
       nWait++;
-      waitingHtml += `<div class="order-card"><span class="order-id">#${id.substring(0,5)}</span><div class="order-cust">👤 <b>${data.customer}</b></div><div class="basket-box">${data.items.map(i => `<div class="basket-item"><span>🔸 ${i.menu}</span><span class="basket-qty">x ${i.qty}</span></div>`).join('')}</div><button class="btn-action btn-start" onclick="updateBasketStatus('${id}', 'waiting', '${data.telegramId}', '${encodeURIComponent(JSON.stringify(data.items))}', '${data.customer}')">🍳 เริ่มทำทั้งตะกร้า</button></div>`;
+      waitingHtml += `<div class="order-card"><span class="order-id">#${id.substring(0,5)}</span><div class="order-cust">👤 <b>${customer}</b></div><div class="basket-box">${itemsList.map(i => `<div class="basket-item"><span>🔸 ${i.menu}</span><span class="basket-qty">x ${i.qty}</span></div>`).join('')}</div><button class="btn-action btn-start" onclick="updateBasketStatus('${id}', 'waiting', '${data.telegramId}', '${itemsJsonStr}', '${customer}')">🍳 เริ่มทำทั้งตะกร้า</button></div>`;
     } else if (data.status === 'cooking') {
       nCook++;
-      cookingHtml += `<div class="order-card"><span class="order-id">#${id.substring(0,5)}</span><div class="order-cust">👤 <b>${data.customer}</b></div><div class="basket-box">${data.items.map(i => `<div class="basket-item"><span>🔸 ${i.menu}</span><span class="basket-qty">x ${i.qty}</span></div>`).join('')}</div><button class="btn-action btn-done" onclick="updateBasketStatus('${id}', 'cooking', '${data.telegramId}', '${encodeURIComponent(JSON.stringify(data.items))}', '${data.customer}')">✅ เสร็จทั้งตะกร้า - เรียกรับ</button></div>`;
+      cookingHtml += `<div class="order-card"><span class="order-id">#${id.substring(0,5)}</span><div class="order-cust">👤 <b>${customer}</b></div><div class="basket-box">${itemsList.map(i => `<div class="basket-item"><span>🔸 ${i.menu}</span><span class="basket-qty">x ${i.qty}</span></div>`).join('')}</div><button class="btn-action btn-done" onclick="updateBasketStatus('${id}', 'cooking', '${data.telegramId}', '${itemsJsonStr}', '${customer}')">✅ เสร็จทั้งตะกร้า - เรียกรับ</button></div>`;
     } else if (data.status === 'completed') { nComp++; }
   });
   document.getElementById('countWaiting').textContent = nWait;
