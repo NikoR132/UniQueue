@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>UniQueue Admin – ระบบบริหารจัดการกลาง</title>
+<title>UniQueue Admin – ระบบบริหารจัดการ</title>
 <style>
     :root { --cream: #FDF6EC; --ink: #2C1810; --red: #E63946; --green: #2A9D8F; }
     body { font-family: sans-serif; background: var(--cream); color: var(--ink); display: flex; min-height: 100vh; }
@@ -12,7 +12,7 @@
     .dashboard { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
     .card { background: white; padding: 20px; border-radius: 10px; border: 1px solid #ddd; text-align: center; }
     .data-table { width: 100%; border-collapse: collapse; background: white; margin-top: 10px; }
-    th, td { padding: 12px; border: 1px solid #ddd; }
+    th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
     .btn-logout { color: var(--red); cursor: pointer; margin-top: 50px; font-weight: bold; }
 </style>
 </head>
@@ -38,35 +38,49 @@
 
     <div id="vendors" class="admin-section" style="display:none;">
         <h2>จัดการร้านค้า</h2>
-        <table class="data-table"><thead><tr><th>ชื่อร้าน</th><th>สถานะ</th><th>จัดการ</th></tr></thead><tbody id="vendorTableBody"></tbody></table>
+        <table class="data-table"><thead><tr><th>ชื่อร้าน</th><th>สถานะ</th></tr></thead><tbody id="vendorTableBody"></tbody></table>
     </div>
 
     <div id="users" class="admin-section" style="display:none;">
         <h2>จัดการผู้ใช้ (นักศึกษา)</h2>
-        <table class="data-table">
-            <thead><tr><th>UID</th><th>ชื่อผู้ใช้</th><th>สถานะ</th></tr></thead>
-            <tbody id="userTableBody"></tbody>
-        </table>
+        <table class="data-table"><thead><tr><th>ชื่อผู้ใช้</th><th>สถานะ</th></tr></thead><tbody id="userTableBody"></tbody></table>
     </div>
 </div>
 
-<script>
-  function showSection(id) {
-    document.querySelectorAll('.admin-section').forEach(s => s.style.display = 'none');
-    document.getElementById(id).style.display = 'block';
-  }
+<script type="module">
+    // --- ใส่โค้ด Firebase ของคุณที่นี่ (ส่วนการ import และ init db) ---
+    import { db } from './firebase-config.js'; // ปรับชื่อไฟล์ให้ตรงกับที่โปรเจกต์คุณใช้
+    import { collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore/firebase-firestore.js";
 
-  function logout() {
-    if(confirm("ออกจากระบบใช่หรือไม่?")) window.location.href = 'index.html';
-  }
+    // ฟังก์ชันสลับหน้า
+    window.showSection = (id) => {
+        document.querySelectorAll('.admin-section').forEach(s => s.style.display = 'none');
+        document.getElementById(id).style.display = 'block';
+    };
 
-  // ตัวอย่างฟังก์ชันดึงข้อมูลจาก Firestore (คุณต้องเติมโค้ด Firebase ของคุณในนี้)
-  async function loadDashboardData() {
-    // ตรงนี้ใช้ getDocs หรือ onSnapshot เพื่อไปนับจำนวน doc ใน collection ร้านค้าและผู้ใช้
-    // แล้วใช้ document.getElementById('shopCount').innerText = ... อัปเดตตัวเลขครับ
-  }
-  
-  loadDashboardData();
+    window.logout = () => { if(confirm("ต้องการออกจากระบบ?")) window.location.href = 'index.html'; };
+
+    // ดึงข้อมูลร้านค้า
+    onSnapshot(collection(db, "shops"), (snap) => {
+        const tbody = document.getElementById('vendorTableBody');
+        tbody.innerHTML = '';
+        document.getElementById('shopCount').innerText = snap.size;
+        snap.forEach(doc => {
+            const data = doc.data();
+            tbody.innerHTML += `<tr><td>${data.name || 'ไม่มีชื่อ'}</td><td>${data.status || 'Active'}</td></tr>`;
+        });
+    });
+
+    // ดึงข้อมูลผู้ใช้
+    onSnapshot(collection(db, "users"), (snap) => {
+        const tbody = document.getElementById('userTableBody');
+        tbody.innerHTML = '';
+        document.getElementById('userCount').innerText = snap.size;
+        snap.forEach(doc => {
+            const data = doc.data();
+            tbody.innerHTML += `<tr><td>${data.displayName || 'นักศึกษา'}</td><td>Active</td></tr>`;
+        });
+    });
 </script>
 </body>
 </html>
