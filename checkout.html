@@ -10,12 +10,12 @@
 body { font-family: 'Sarabun', sans-serif; background: var(--cream); color: var(--ink); padding-bottom: 40px; }
 .hero { background: var(--terra); padding: 40px 20px 60px; text-align: center; color: white; }
 .wrap { max-width: 500px; margin: -32px auto 0; padding: 0 16px; position: relative; }
-.shop-section { background: var(--white); border-radius: var(--r); padding: 16px; margin-bottom: 16px; border: 1px solid #E8D5BC; }
-.shop-section-title { font-weight: 700; color: var(--terra); margin-bottom: 12px; border-bottom: 2px solid var(--terra); padding-bottom: 8px; }
-.shop-item { display: flex; justify-content: space-between; padding: 6px 0; font-size: 0.9rem; }
-.btn-pay { background: var(--terra); color: white; border: none; border-radius: 10px; padding: 12px; width: 100%; font-weight: 600; cursor: pointer; margin-top: 12px; }
+.shop-section { background: var(--white); border-radius: var(--r); padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+.shop-title { font-weight: 700; color: var(--terra); margin-bottom: 12px; border-bottom: 2px solid var(--terra); padding-bottom: 8px; }
+.item-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 0.9rem; }
+.btn-pay { background: var(--terra); color: white; border: none; border-radius: 10px; padding: 12px; width: 100%; font-weight: 600; cursor: pointer; margin-top: 15px; }
 .btn-pay:hover { background: var(--terra-dk); }
-.btn-clear { background: none; border: 1px solid #E8D5BC; color: #9C8070; padding: 10px; width: 100%; border-radius: 10px; margin-top: 10px; cursor: pointer; }
+.btn-clear { background: none; border: 1px solid #E8D5BC; color: #9C8070; padding: 10px; width: 100%; border-radius: 10px; margin-top: 20px; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -35,7 +35,7 @@ function renderCart() {
     const container = document.getElementById('cartContainer');
     
     if (cart.length === 0) {
-        container.innerHTML = '<div style="text-align:center; padding:40px;">ตะกร้ายังไม่มีรายการอาหาร</div>';
+        container.innerHTML = '<div style="text-align:center; padding:40px;">ตะกร้ายังว่างเปล่าอยู่ครับ</div>';
         return;
     }
 
@@ -49,19 +49,20 @@ function renderCart() {
         shopGroups[item.shopId].total += (item.price * item.qty);
     });
 
-    // สร้าง HTML แยกตามร้านค้า
+    // สร้าง HTML แยกโซนตามร้าน
     let html = '';
     for (let shopId in shopGroups) {
         const shop = shopGroups[shopId];
-        html += `<div class="shop-section">
-            <div class="shop-section-title">🏪 ${shop.shopName}</div>
+        html += `
+        <div class="shop-section">
+            <div class="shop-title">🏪 ${shop.shopName}</div>
             ${shop.items.map(item => `
-                <div class="shop-item">
+                <div class="item-row">
                     <span>${item.menu} x ${item.qty}</span>
                     <span>฿${item.price * item.qty}</span>
                 </div>
             `).join('')}
-            <div style="margin-top:10px; font-weight:700; text-align:right; color:var(--terra);">รวม: ฿${shop.total}</div>
+            <div style="margin-top:10px; font-weight:700; text-align:right; color:var(--terra);">ยอดรวม: ฿${shop.total}</div>
             <button class="btn-pay" onclick="payForShop('${shopId}')">💳 ชำระเงินร้าน ${shop.shopName}</button>
         </div>`;
     }
@@ -69,7 +70,7 @@ function renderCart() {
 }
 
 function payForShop(shopId) {
-    // ส่ง shopId ไปที่หน้า payment เพื่อให้หน้านั้นไปกรองข้อมูลเอง
+    // ส่ง shopId ไปที่หน้า payment เพื่อประมวลผลแยกตามร้าน
     window.location.href = `payment.html?shopId=${shopId}`;
 }
 
