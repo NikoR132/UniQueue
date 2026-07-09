@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UniQueue Admin – ระบบบริหารจัดการกลาง</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --cream:     #FDF6EC;
+  --warm:      #F5E6CC;
+  --terra:     #C8522A;
+  --terra-dk:  #A8391A;
+  --ink:       #2C1810;
+  --muted:     #9C8070;
+  --border:    #E8D5BC;
+  --white:     #FFFFFF;
+  --green:     #2A9D8F;
+  --red:       #E63946;
+  --r:         14px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Sarabun', sans-serif;
+  background: var(--cream);
+  color: var(--ink);
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Sidebar เมนูด้านข้าง */
+.sidebar {
+  width: 260px;
+  background: var(--ink);
+  color: var(--warm);
+  padding: 30px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  position: fixed;
+  height: 100vh;
+}
+.sidebar-brand { font-size: 1.5rem; font-weight: 700; color: var(--white); text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; }
+.sidebar-menu { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.menu-item { padding: 12px 16px; border-radius: 8px; cursor: pointer; font-weight: 500; transition: all 0.2s; display: flex; align-items: center; gap: 10px; color: var(--border); }
+.menu-item:hover, .menu-item.active { background: var(--terra); color: var(--white); }
+
+/* พื้นที่คอนเทนต์หลัก */
+.main-admin {
+  margin-left: 260px;
+  flex: 1;
+  padding: 40px;
+  background: var(--cream);
+}
+.admin-section { display: none; }
+.admin-section.active { display: block; }
+
+.section-title { font-size: 1.8rem; font-weight: 700; color: var(--terra); margin-bottom: 24px; }
+
+/* ตารางแสดงข้อมูล */
+.data-table { width: 100%; border-collapse: collapse; background: var(--white); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.03); margin-top: 15px; }
+.data-table th, .data-table td { padding: 14px 20px; text-align: left; border-bottom: 1px solid var(--cream); vertical-align: middle; }
+.data-table th { background: var(--warm); font-weight: 700; color: var(--ink); }
+.data-table tr:hover { background: #FAF5ED; }
+
+/* ลิงก์เข้าหน้าร้าน */
+.shop-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--terra);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s;
+}
+.shop-link:hover {
+  color: var(--terra-dk);
+  text-decoration: underline;
+}
+
+/* ปุ่มจัดการ */
+.btn-action { padding: 6px 12px; border-radius: 6px; border: none; font-family: 'Sarabun', sans-serif; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+.btn-ban { background: #FAD2E1; color: var(--red); }
+.btn-unban { background: #D8F3DC; color: var(--green); }
+.btn-delete { background: #FFE3E3; color: var(--red); border: 1px solid #FFC9C9; margin-left: 5px; }
+.btn-delete:hover { background: var(--red); color: white; }
+.btn-primary { background: var(--terra); color: white; padding: 10px 18px; border-radius: 8px; font-size: 0.9rem; font-weight: 600; border: none; cursor: pointer; margin-bottom: 20px; }
+.btn-primary:hover { background: var(--terra-dk); }
+
+/* ป้ายสถานะ */
+.status-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; }
+.status-active { background: #D8F3DC; color: var(--green); }
+.status-suspended { background: #FAD2E1; color: var(--red); }
+
+/* ฟอร์มเพิ่มร้านค้า */
+.form-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.4); display: none; justify-content: center; align-items: center; z-index: 1000; }
+.form-box { background: var(--white); padding: 30px; border-radius: var(--r); width: 100%; max-width: 500px; border: 1px solid var(--border); }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 0.9rem; font-weight: 600; margin-bottom: 6px; }
+.form-group input { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; font-family: 'Sarabun', sans-serif; font-size: 0.95rem; }
+.form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-brand">📊 UniQueue Admin</div>
+  <ul class="sidebar-menu">
+    <li class="menu-item active" onclick="switchTab('vendors')">🏢 จัดการร้านค้า</li>
+    <li class="menu-item" onclick="switchTab('users')">👥 จัดการผู้ใช้ (นักศึกษา)</li>
+  </ul>
+</div>
+
+<div class="main-admin">
+
+  <div id="section-vendors" class="admin-section active">
+    <h2 class="section-title">🏢 ระบบบริหารจัดการร้านค้าโรงอาหาร</h2>
+    <button class="btn-primary" onclick="openVendorModal()">➕ เพิ่มร้านค้าใหม่เข้าระบบ</button>
+    
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>ลำดับ</th>
+          <th>ชื่อร้านค้า (กดเพื่อเข้าหน้าร้าน)</th>
+          <th>ลิงก์ไฟล์ระบบหน้าร้าน (Path)</th>
+          <th>สถานะ</th>
+          <th>การจัดการ</th>
+        </tr>
+      </thead>
+      <tbody id="vendorTableBody">
+        <tr><td colspan="5" style="text-align:center; color: var(--muted); padding: 30px;">⏳ กำลังโหลดข้อมูลร้านค้า...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div id="section-users" class="admin-section">
+    <h2 class="section-title">👥 ระบบตรวจสอบและควบคุมบัญชีนักศึกษา</h2>
+    <div style="margin-bottom: 15px; color: var(--muted); font-weight: 500;">นักศึกษาที่ลงทะเบียนในระบบ: <span style="color: var(--terra); font-weight: bold;">1</span> คน</div>
+    
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>UID</th>
+          <th>ชื่อผู้สั่งซื้อ</th>
+          <th>Telegram Chat ID</th>
+          <th>สถานะระบบ</th>
+          <th>มาตรการ</th>
+        </tr>
+      </thead>
+      <tbody id="userTableBody">
+        <tr>
+          <td>USER_6591886184</td>
+          <td><b>โอม</b></td>
+          <td>6591886184</td>
+          <td><span class="status-badge status-active">ปกติ</span></td>
+          <td><button class="btn-action btn-ban" onclick="toggleUserBan(this, 'โอม')">🚫 บล็อกการสั่งซื้อ</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<div class="form-overlay" id="vendorModal">
+  <div class="form-box">
+    <h3 style="margin-bottom: 15px; color: var(--terra);">➕ ลงทะเบียนร้านค้าใหม่เข้าระบบ</h3>
+    <div class="form-group">
+      <label>ชื่อร้านค้าใหม่</label>
+      <input type="text" id="newShopName" placeholder="เช่น ร้านกาแฟโบราณ">
+    </div>
+    <div class="form-group">
+      <label>ลิงก์ไฟล์ระบบหน้าร้าน (Path)</label>
+      <input type="text" id="newShopPath" placeholder="เช่น ร้านอาหาร/ร้านกาแฟ/กาแฟ.html">
+    </div>
+    <div class="form-actions">
+      <button class="btn-action" style="background: var(--warm); padding: 10px 16px;" onclick="closeVendorModal()">ยกเลิก</button>
+      <button class="btn-primary" style="margin: 0; padding: 10px 16px;" onclick="submitNewVendor()">💾 บันทึกร้านค้า</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// 🔀 สลับแท็บการทำงาน
+function switchTab(tabName) {
+    document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.admin-section').forEach(el => el.classList.remove('active'));
+    
+    event.currentTarget.classList.add('active');
+    document.getElementById(`section-${tabName}`).classList.add('active');
+}
+
+// 🏢 เปิด-ปิดป็อปอัพเพิ่มร้าน
+function openVendorModal() { document.getElementById('vendorModal').style.display = 'flex'; }
+function closeVendorModal() { document.getElementById('vendorModal').style.display = 'none'; }
+
+// ➕ เพิ่มร้านค้าใหม่ -> บันทึกลง Firestore จริง (ฟังก์ชันจริงอยู่ในสคริปต์ module ด้านล่าง)
+function submitNewVendor() {
+    const name = document.getElementById('newShopName').value.trim();
+    const path = document.getElementById('newShopPath').value.trim();
+
+    if(!name || !path) {
+        alert("❌ กรุณากรอกข้อมูลให้ครบถ้วนก่อนเซฟนะครับ");
+        return;
+    }
+
+    window.__addShopToFirestore(name, path).then(() => {
+        alert(`🎉 เพิ่มร้าน "${name}" เข้าสู่ระบบเรียบร้อยแล้วครับ! (จะไปปรากฏที่หน้า index.html ทันที)`);
+        closeVendorModal();
+        document.getElementById('newShopName').value = '';
+        document.getElementById('newShopPath').value = '';
+    }).catch(err => {
+        console.error(err);
+        alert('❌ บันทึกไม่สำเร็จ: ' + err.message);
+    });
+}
+
+// 🗑️ ลบร้านค้าออกจากระบบอย่างสมบูรณ์ (ลบใน Firestore -> หายจากทุกหน้าทันที)
+function deleteShop(button) {
+    const row = button.closest('tr');
+    const shopId = row.dataset.id;
+    const shopName = row.dataset.name;
+    if (confirm(`คุณแน่ใจหรือไม่ว่าต้องการ "ลบ" [ ${shopName} ] ออกจากระบบอย่างถาวร?`)) {
+        window.__deleteShopFromFirestore(shopId).catch(err => {
+            console.error(err);
+            alert('❌ ลบไม่สำเร็จ: ' + err.message);
+        });
+    }
+}
+
+// 🛑 เปิด-ปิดการระงับบริการร้านค้า (อัปเดต Firestore -> หน้า index.html เปลี่ยนตามทันที)
+function toggleShopStatus(button) {
+    const row = button.closest('tr');
+    const shopId = row.dataset.id;
+    const isCurrentlySuspended = row.dataset.status === 'suspended';
+    const newStatus = isCurrentlySuspended ? 'active' : 'suspended';
+    window.__setShopStatus(shopId, newStatus).catch(err => {
+        console.error(err);
+        alert('❌ อัปเดตสถานะไม่สำเร็จ: ' + err.message);
+    });
+}
+
+// 👥 บล็อก/ปลดบล็อกผู้ใช้งาน โอม
+function toggleUserBan(button, name) {
+    const row = button.closest('tr');
+    const statusCell = row.cells[3];
+    
+    if(button.classList.contains('btn-ban')) {
+        if(confirm(`คุณต้องการระงับสิทธิ์การสั่งอาหารของ [ ${name} ] ใช่หรือไม่?`)) {
+            statusCell.innerHTML = '<span class="status-badge status-suspended">❌ ถูกระงับบัญชี</span>';
+            button.className = 'btn-action btn-unban';
+            button.innerText = '🔓 ปลดบล็อก';
+        }
+    } else {
+        statusCell.innerHTML = '<span class="status-badge status-active">ปกติ</span>';
+        button.className = 'btn-action btn-ban';
+        button.innerText = '🚫 บล็อกการสั่งซื้อ';
+    }
+}
+</script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import {
+  getFirestore, collection, doc, getDocs, setDoc, addDoc,
+  updateDoc, deleteDoc, onSnapshot, query, orderBy
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const app = initializeApp({
+  apiKey: "AIzaSyAGg-Xsst8kkL0DyZ6Ay4o3dnmBg6pVps0",
+  authDomain: "uniqueue-1e6a9.firebaseapp.com",
+  projectId: "uniqueue-1e6a9",
+  storageBucket: "uniqueue-1e6a9.firebasestorage.app",
+  messagingSenderId: "704755349414",
+  appId: "1:704755349414:web:119ff42eef7ff0bcc98167"
+});
+const db = getFirestore(app);
+const shopsCol = collection(db, "shops");
+
+// 🌱 ข้อมูลร้านค้าเริ่มต้น (ใช้ seed ครั้งแรกครั้งเดียวตอนที่ Firestore ยังไม่มีข้อมูลร้านค้าเลย)
+const SEED_SHOPS = [
+  {
+    "id": "shop1",
+    "name": "ร้านเมล่อนของทอด",
+    "path": "ร้านอาหาร/ร้านเมล่อนของทอด/ร้านเมล่อนของทอด.html",
+    "image": "images/รูปหน้าร้าน/ร้านเมล่อนของทอด.jpg",
+    "desc": "ของทอดร้อนๆ เมนูกินเล่นหลากหลาย ทอดสดใหม่ทุกออเดอร์",
+    "order": 1
+  },
+  {
+    "id": "shop2",
+    "name": "ร้าน The ChickeM ชิคข้าวไก่เกาหลี",
+    "path": "ร้านอาหาร/ชิคข้าวไก่เกาหลี/ชิคข้าวไก่เกาหลี.html",
+    "image": "images/รูปหน้าร้าน/ร้านThe ChickeM ชิคข้าวไก่เกาหลี.png",
+    "desc": "ข้าวไก่เกาหลี กรอบอร่อยซอสฉ่ำ",
+    "order": 2
+  },
+  {
+    "id": "shop3",
+    "name": "ร้านป้าข้าวมันไก่",
+    "path": "ร้านอาหาร/ร้านป้าแมวข้าวมันไก่/ร้านป้าแมวข้าวมันไก่.html",
+    "image": "images/รูปหน้าร้าน/ร้านป้าแมวข้าวมันไก่.jpg",
+    "desc": "ข้าวมันไก่นุ่มๆ น้ำจิ้มรสเด็ด น้ำซุปเข้มข้น",
+    "order": 3
+  },
+  {
+    "id": "shop4",
+    "name": "ร้านผลไม้สด น้าเนา",
+    "path": "ร้านอาหาร/ร้านผลไม้สด น้าเนา/ร้านผลไม้สด น้าเนา.html",
+    "image": "images/รูปหน้าร้าน/ร้านผลไม้สด น้าเนา.jpg",
+    "desc": "ผลไม้สดตามฤดูกาล หวานกรอบ สะอาด พร้อมทาน",
+    "order": 4
+  },
+  {
+    "id": "shop5",
+    "name": "ร้านพี่อ้วนอาหารตามสั่ง",
+    "path": "ร้านอาหาร/ร้านพี่อ้วนอาหารตามสั่ง/ร้านพี่อ้วนอาหารตามสั่ง.html",
+    "image": "images/รูปหน้าร้าน/ร้านพี่อ้วนอาหารตามสั่ง.png",
+    "desc": "อาหารตามสั่งรสเด็ด เลือกวัตถุดิบและท็อปปิ้งได้ตามใจชอบ",
+    "order": 5
+  },
+  {
+    "id": "shop6",
+    "name": "ร้านกะเพราถาด",
+    "path": "ร้านอาหาร/ร้านกะเพราถาด/ร้านกะเพราถาด.html",
+    "image": "images/รูปหน้าร้าน/ร้านกะเพราถาด.jpg",
+    "desc": "กะเพราถาดเครื่องแน่น รสชาติจัดจ้าน อิ่มอร่อยจุใจ",
+    "order": 6
+  },
+  {
+    "id": "shop7",
+    "name": "ร้านอาหารตามสั่งสุกี้ราชา",
+    "path": "ร้านอาหาร/ร้านอาหารตามสั่งสุกี้ราชา/ร้านอาหารตามสั่งสุกี้ราชา.html",
+    "image": "images/รูปหน้าร้าน/ร้านอาหารตามสั่งสุกี้ราชา.jpg",
+    "desc": "สุกี้รสเด็ดและอาหารตามสั่งรสชาติกลมกล่อม วัตถุดิบคุณภาพดี",
+    "order": 7
+  },
+  {
+    "id": "shop8",
+    "name": "ก๋วยเตี๋ยวต้มยำน้ำข้น",
+    "path": "ร้านอาหาร/ก๋วยเตี๋ยวต้มยำน้ำข้น/ก๋วยเตี๋ยวต้มยำน้ำข้น.html",
+    "image": "images/รูปหน้าร้าน/ก๋วยเตี๋ยวต้มยำน้ำข้น.jpg",
+    "desc": "ก๋วยเตี๋ยวต้มยำน้ำข้นรสเด็ด แซ่บจี๊ด เครื่องแน่นรสชาติจัดจ้าน",
+    "order": 8
+  },
+  {
+    "id": "shop9",
+    "name": "ไก่จ๋าบะหมี่คลุกแต่งซิ่ง",
+    "path": "ร้านอาหาร/ไก่จ๋าบะหมี่คลุกแต่งซิ่ง/ไก่จ๋าบะหมี่คลุกแต่งซิ่ง.html",
+    "image": "images/รูปหน้าร้าน/ไก่จ๋าบะหมี่คลุกแต่งซิ่ง.jpg",
+    "desc": "บะหมี่คลุกซอสรสเด็ด เลือกแต่งซิ่งความอร่อยได้ตามใจ",
+    "order": 9
+  },
+  {
+    "id": "shop10",
+    "name": "เจ๊นกข้าวราดแกง",
+    "path": "ร้านอาหาร/เจ๊นกข้าวราดแกง/เจ๊นกข้าวราดแกง.html",
+    "image": "images/รูปหน้าร้าน/เจ๊นกข้าวราดแกง.jpg",
+    "desc": "ข้าวราดแกงหลากหลายเมนู อร่อย สะอาด อิ่มคุ้มเกินราคา",
+    "order": 10
+  },
+  {
+    "id": "shop11",
+    "name": "ซงเจริญ 2 ชาบูเสียบไม้",
+    "path": "ร้านอาหาร/ซงเจริญ2ชาบูเสียบไม้/ซงเจริญ2ชาบูเสียบไม้.html",
+    "image": "images/รูปหน้าร้าน/ซงเจริญ2ชาบูเสียบไม้.jpg",
+    "desc": "ชาบูเสียบไม้ร้อนๆ ซุปรสเด็ด จิ้มน้ำจิ้มสุกี้หม่าล่าสุดฟิน",
+    "order": 11
+  },
+  {
+    "id": "shop12",
+    "name": "น้ำแข็งใสเกล็ดหิมะ",
+    "path": "ร้านอาหาร/น้ำแข็งใสเกล็ดหิมะ/น้ำแข็งใสเกล็ดหิมะ.html",
+    "image": "images/รูปหน้าร้าน/น้ำแข็งใสเกล็ดหิมะ.jpg",
+    "desc": "ของหวานดับร้อน น้ำแข็งใสเกล็ดหิมะนุ่มละมุนและท็อปปิ้งหลากหลาย",
+    "order": 12
+  },
+  {
+    "id": "shop13",
+    "name": "ร้าน MeWaffle",
+    "path": "ร้านอาหาร/ร้านMeWaffle/ร้านMeWaffle.html",
+    "image": "images/รูปหน้าร้าน/ร้านMeWaffle.jpg",
+    "desc": "วาฟเฟิลอบสดใหม่ หอมฉุยจากเตา กรอบนอกนุ่มใน",
+    "order": 13
+  },
+  {
+    "id": "shop14",
+    "name": "ร้านก๋วยจั๊บป้ารัตน์",
+    "path": "ร้านอาหาร/ร้านก๋วยจั๊บป้ารัตน์/ร้านก๋วยจั๊บป้ารัตน์.html",
+    "image": "images/รูปหน้าร้าน/ร้านก๋วยจั๊บป้ารัตน์.jpg",
+    "desc": "ก๋วยจั๊บน้ำข้น เครื่องแน่น น้ำซุปพะโล้เข้มข้นกลมกล่อม",
+    "order": 14
+  },
+  {
+    "id": "shop15",
+    "name": "ร้านป้าต้อยของทอดในตำนาน",
+    "path": "ร้านอาหาร/ร้านป้าต้อยของทอดในตำนาน/ร้านป้าต้อยของทอดในตำนาน.html",
+    "image": "images/รูปหน้าร้าน/ร้านป้าต้อยของทอดในตำนาน.jpg",
+    "desc": "รวมสารพัดของทอดในตำนาน ทอดสดใหม่ กรอบอร่อย ไม่อมน้ำมัน",
+    "order": 15
+  },
+  {
+    "id": "shop16",
+    "name": "ร้านส้มตำยำและลาบต้ม",
+    "path": "ร้านอาหาร/ร้านส้มตำยำและลาบต้ม/ร้านส้มตำยำและลาบต้ม.html",
+    "image": "images/รูปหน้าร้าน/ร้านส้มตำยำและลาบต้ม.jpg",
+    "desc": "แซ่บนัวถึงใจ ส้มตำ ยำ ลาบ และเมนูต้มแซ่บรสเด็ดจัดจ้าน",
+    "order": 16
+  },
+  {
+    "id": "shop17",
+    "name": "ร้านส้มตำลาบยำ",
+    "path": "ร้านอาหาร/ร้านส้มตำลาบยำ/ร้านส้มตำลาบยำ.html",
+    "image": "images/รูปหน้าร้าน/ร้านส้มตำลาบยำ.jpg",
+    "desc": "อาหารอีสานรสเด็ด ส้มตำนัวๆ ยำแซ่บๆ สดสะอาดทุกจาน",
+    "order": 17
+  }
+]
+;
+
+async function ensureSeeded() {
+  const snap = await getDocs(shopsCol);
+  if (snap.empty) {
+    for (const s of SEED_SHOPS) {
+      const { id, ...data } = s;
+      await setDoc(doc(db, "shops", id), { ...data, status: "active" });
+    }
+  }
+}
+
+function renderVendorTable(shopsSorted) {
+  const tbody = document.getElementById('vendorTableBody');
+  if (!tbody) return;
+
+  if (shopsSorted.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color: var(--muted); padding: 30px;">ยังไม่มีร้านค้าในระบบ</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = shopsSorted.map((s, index) => {
+    const isSuspended = s.status === 'suspended';
+    const statusBadge = isSuspended
+      ? '<span class="status-badge status-suspended">🔴 ระงับบริการ</span>'
+      : '<span class="status-badge status-active">🟢 เปิดบริการ</span>';
+    const btnClass = isSuspended ? 'btn-action btn-unban' : 'btn-action btn-ban';
+    const btnLabel = isSuspended ? '🟢 เปิดบริการ' : '🛑 ระงับ';
+
+    return `
+      <tr data-id="${s.id}" data-status="${s.status}" data-name="${s.name}">
+        <td class="row-index">${index + 1}</td>
+        <td><a href="${s.path}" target="_blank" class="shop-link">🔗 ${s.name}</a></td>
+        <td><code>${s.path}</code></td>
+        <td>${statusBadge}</td>
+        <td>
+          <button class="${btnClass}" onclick="toggleShopStatus(this)">${btnLabel}</button>
+          <button class="btn-action btn-delete" onclick="deleteShop(this)">🗑️ ลบ</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+async function init() {
+  await ensureSeeded();
+
+  const q = query(shopsCol, orderBy("order", "asc"));
+  onSnapshot(q, (snap) => {
+    const shops = [];
+    snap.forEach(d => shops.push({ id: d.id, ...d.data() }));
+    renderVendorTable(shops);
+  }, (err) => {
+    console.error("Firestore listen error:", err);
+    document.getElementById('vendorTableBody').innerHTML =
+      '<tr><td colspan="5" style="text-align:center; color: var(--red); padding: 30px;">⚠️ โหลดข้อมูลไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อ Firebase</td></tr>';
+  });
+}
+init();
+
+// 🌐 ฟังก์ชันที่ผูกกับ window ให้สคริปต์หลักด้านบนเรียกใช้ได้
+window.__addShopToFirestore = async (name, path) => {
+  const snap = await getDocs(shopsCol);
+  const maxOrder = snap.docs.reduce((m, d) => Math.max(m, d.data().order || 0), 0);
+  await addDoc(shopsCol, {
+    name, path, image: "", desc: "", status: "active", order: maxOrder + 1
+  });
+};
+
+window.__deleteShopFromFirestore = async (shopId) => {
+  await deleteDoc(doc(db, "shops", shopId));
+};
+
+window.__setShopStatus = async (shopId, newStatus) => {
+  await updateDoc(doc(db, "shops", shopId), { status: newStatus });
+};
+</script>
+</body>
+</html>

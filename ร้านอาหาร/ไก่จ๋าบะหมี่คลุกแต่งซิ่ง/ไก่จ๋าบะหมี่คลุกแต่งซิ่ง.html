@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UniQueue – ระบบตะกร้าร้านไก่จ๋า บะหมี่คลุกแต่งซิ่ง</title>
+<link rel="manifest" href="../../manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --cream:     #121214; /* ดำดุดันสไตล์เรซซิ่ง */
+  --warm:      #1A1A1E; 
+  --terra:     #D32F2F; /* แดงซิ่งแรงแซงทุกคิว */
+  --terra-dk:  #B71C1C;
+  --amber:     #FF9100; /* ส้ม/เหลืองแต่งซิ่ง */
+  --blue-speed:#2979FF; /* น้ำเงินสปอร์ตตามป้ายร้าน */
+  --ink:       #FFFFFF;
+  --muted:     #A0A0AA;
+  --border:    #2F2F35;
+  --white:     #1E1E22;
+  --r:         18px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Sarabun', sans-serif;
+  background: var(--cream);
+  color: var(--ink);
+  min-height: 100dvh;
+  padding-bottom: 90px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hero {
+  background: linear-gradient(135deg, #0D47A1 0%, #1565C0 50%, #B71C1C 100%); /* กราฟิกไล่เฉดน้ำเงินแดงสปอร์ต */
+  padding: 40px 20px 64px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.hero::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: 0; right: 0;
+  height: 32px;
+  background: var(--cream);
+  border-radius: 32px 32px 0 0;
+}
+.hero-img {
+  width: 76px; height: 76px;
+  border-radius: 50%;
+  border: 3px solid var(--amber);
+  object-fit: cover;
+  margin-bottom: 12px;
+  background: #fff;
+}
+.hero h1 { font-size: 1.7rem; font-weight: 800; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.5); letter-spacing: -0.5px; }
+.hero p { font-size: 0.9rem; color: #FFD54F; font-weight: 500; margin-top: 4px; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+.hero-badge { display: inline-block; background: var(--terra); color: #fff; font-weight: 700; font-size: 0.8rem; padding: 4px 14px; border-radius: 50px; margin-top: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); letter-spacing: 0.5px; }
+
+.wrap { max-width: 480px; margin: 0 auto; padding: 0 16px 48px; margin-top: -32px; position: relative; z-index: 1; }
+
+.back-btn-container { margin-bottom: 16px; }
+.back-btn { 
+  display: inline-flex; 
+  align-items: center; 
+  gap: 6px;
+  font-size: 0.9rem; 
+  color: var(--amber); 
+  text-decoration: none; 
+  font-weight: 600; 
+  background: rgba(255,145,0,0.12);
+  padding: 8px 16px;
+  border-radius: 50px;
+  border: 1px solid rgba(255,145,0,0.2);
+  transition: background 0.2s;
+}
+.back-btn:hover { background: rgba(255,145,0,0.22); }
+
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 22px; }
+.stat { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 18px 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); text-align: center; }
+.stat-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 6px; }
+.stat-num { font-size: 2.4rem; font-weight: 800; line-height: 1; color: var(--amber); }
+.stat-unit { font-size: 0.75rem; color: var(--muted); margin-top: 3px; }
+
+.divider { display: flex; align-items: center; gap: 10px; margin: 24px 0 14px 0; font-size: 0.9rem; font-weight: 800; color: var(--blue-speed); letter-spacing: .06em; text-transform: uppercase; }
+.divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* SELECTION BOXES FOR SPEED TUNING */
+.opt-block { width: 100%; display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; background: rgba(255,255,255,0.02); padding: 8px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.04); }
+.opt-container { width: 100%; text-align: left; }
+.opt-label { font-size: 0.7rem; font-weight: 700; color: var(--amber); margin-bottom: 3px; display: block; }
+.opt-select { width: 100%; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border); font-family: 'Sarabun', sans-serif; font-size: 0.8rem; color: var(--ink); background-color: #121214; outline: none; }
+
+/* MENU GRID */
+.menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.menu-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); position: relative; overflow: hidden; }
+.menu-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--terra); }
+.menu-img { width: 100%; height: 110px; border-radius: 12px; object-fit: cover; background: #2A2A30; }
+.menu-info { width: 100%; text-align: left; }
+.menu-name { font-size: 0.9rem; font-weight: 700; color: var(--ink); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; height: 2.5em; line-height: 1.25em; }
+.menu-price { font-size: 1.15rem; font-weight: 800; color: var(--terra); margin-top: 2px; }
+.menu-time { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
+
+.btn {
+  background: linear-gradient(90deg, var(--terra) 0%, #FF1744 100%); color: #fff; border: none; border-radius: 50px; padding: 10px 0; width: 100%;
+  font-family: 'Sarabun', sans-serif; font-size: 0.85rem; font-weight: 700; cursor: pointer;
+  transition: transform .1s, opacity 0.2s; box-shadow: 0 4px 12px rgba(211,47,47,0.3);
+  letter-spacing: 0.3px;
+}
+.btn:hover  { opacity: 0.9; }
+.btn:active { transform: scale(.94); }
+
+/* แถบตะกร้าลอยด้านล่าง */
+.cart-bar {
+  position: fixed; bottom: 0; left: 0; right: 0; background: #1E1E22;
+  border-top: 1px solid var(--border); box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
+  padding: 14px 20px; display: flex; justify-content: space-between; align-items: center;
+  z-index: 900; transform: translateY(100%); transition: transform 0.3s ease;
+}
+.cart-bar.active { transform: translateY(0); }
+.cart-bar-info { display: flex; flex-direction: column; }
+.cart-bar-count { font-size: 0.8rem; color: var(--muted); font-weight: 500; }
+.cart-bar-total { font-size: 1.4rem; font-weight: 800; color: var(--terra); }
+.btn-checkout { max-width: 180px; padding: 12px 24px; font-size: 0.95rem; background: linear-gradient(90deg, var(--blue-speed) 0%, #29B6F6 100%); box-shadow: 0 4px 12px rgba(41,121,255,0.3); }
+
+#toast {
+  position: fixed; bottom: 95px; left: 50%; transform: translateX(-50%) translateY(12px);
+  background: var(--blue-speed); color: #fff; padding: 12px 22px; border-radius: 50px;
+  font-size: 0.85rem; font-weight: 600; pointer-events: none; opacity: 0;
+  transition: opacity .25s, transform .25s; z-index: 999; white-space: nowrap; max-width: 90vw;
+  box-shadow: 0 4px 15px rgba(41,121,255,0.4);
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+#toast.err  { background: #D32F2F; box-shadow: 0 4px 15px rgba(211,47,47,0.4); }
+
+/* 🛒 ตะกร้า Modal */
+.cart-modal {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.7); display: flex; align-items: flex-end; z-index: 1000;
+  opacity: 0; pointer-events: none; transition: opacity 0.3s ease; padding: 16px;
+}
+.cart-modal.open { opacity: 1; pointer-events: auto; }
+.cart-modal-content {
+  background: var(--white); border-radius: 24px 24px 0 0; width: 100%; max-width: 500px;
+  max-height: 75vh; overflow-y: auto; padding: 24px; box-shadow: 0 -10px 30px rgba(0,0,0,0.5); margin: 0 auto;
+  border: 1px solid var(--border); border-bottom: none;
+}
+.cart-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.cart-modal-title { font-size: 1.4rem; font-weight: 800; color: var(--ink); }
+.cart-close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--muted); }
+.cart-items-container { margin-bottom: 20px; max-height: 40vh; overflow-y: auto; }
+.cart-item {
+  background: #121214; border: 1px solid var(--border); border-radius: 12px;
+  padding: 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;
+}
+.cart-item-info { flex: 1; padding-right: 8px; }
+.cart-item-name { font-weight: 700; color: var(--ink); font-size: 0.9rem; }
+.cart-item-meta { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
+.cart-item-qty { display: flex; align-items: center; gap: 8px; }
+.qty-btn {
+  background: var(--terra); color: white; border: none; width: 24px; height: 24px;
+  border-radius: 50%; cursor: pointer; font-size: 0.8rem; font-weight: 700;
+}
+.qty-btn:hover { opacity: 0.9; }
+.cart-item-total { margin-left: 12px; font-weight: 800; color: var(--amber); min-width: 60px; text-align: right; }
+.cart-empty { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 0.9rem; }
+.cart-summary { background: #121214; border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+.summary-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 0.9rem; color: var(--muted); }
+.summary-row:last-child {
+  margin-bottom: 0; font-weight: 800; font-size: 1.2rem; color: var(--terra); border-top: 1px solid var(--border); padding-top: 12px;
+}
+.cart-actions { display: flex; gap: 12px; }
+.btn-checkout-modal { flex: 1; background: linear-gradient(90deg, var(--blue-speed) 0%, #29B6F6 100%); color: white; border: none; padding: 14px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 0.95rem; }
+.btn-clear-modal { flex: 1; background: none; border: 1px solid var(--border); color: var(--muted); padding: 14px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 0.95rem; }
+.btn-clear-modal:hover { background: rgba(255,255,255,0.02); }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <img src="https://media.tenor.com/On7kvXvQM5AAAAAj/ramen-noodle.gif" class="hero-img" alt="logo">
+  <h1>ไก่จ๋า บะหมี่คลุกแต่งซิ่ง 🏁</h1>
+  <p>เลือกเส้น เลือกซอส แต่งทอปปิ้งซิ่งได้ตามใจคุณ</p>
+  <div class="hero-badge">ราคาเริ่มต้น ฿35</div>
+</div>
+
+<div class="wrap">
+  <div class="back-btn-container">
+    <a href="../../index.html" class="back-btn">⬅️ กลับไปหน้ารวมร้านค้า</a>
+  </div>
+
+  <input type="hidden" id="custName">
+  <input type="hidden" id="tgId">
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-label">คิวเรซซิ่งอยู่</div>
+      <div class="stat-num" id="totalQ">0</div>
+      <div class="stat-unit">ชุดออเดอร์</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">เวลารอประมาณ</div>
+      <div class="stat-num" id="waitTime">0</div>
+      <div class="stat-unit">นาที</div>
+    </div>
+  </div>
+
+  <div class="divider">⚡ เมนูบะหมี่คลุกแต่งซิ่ง (เริ่มต้น ฿35)</div>
+  <div class="menu-grid">
+    
+    <div class="menu-card">
+      <img src="../../images/menu/crispy-chicken-noodles.jpg" class="menu-img" alt="บะหมี่คลุกไก่กรอบ">
+      <div class="menu-info">
+        <div class="menu-name">บะหมี่คลุก + ไก่กรอบ</div>
+        <div class="menu-price">฿35</div>
+        <div class="menu-time">⏱ ~4 นาที</div>
+      </div>
+      <div class="opt-block">
+        <div class="opt-container">
+          <label class="opt-label">เลือกเส้น:</label>
+          <select class="opt-select" id="line-1">
+            <option value="หมี่ขาว">หมี่ขาว</option>
+            <option value="บะหมี่กึ่งสำเร็จรูป">บะหมี่กึ่งสำเร็จรูป</option>
+          </select>
+        </div>
+        <div class="opt-container">
+          <label class="opt-label">เลือกซอส:</label>
+          <select class="opt-select" id="sauce-1">
+            <option value="ซอสมะขาม">ซอสมะขาม</option>
+            <option value="ซอสเทริยากิ">ซอสเทริยากิ</option>
+            <option value="ซอสรสชีส">ซอสรสชีส</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn" onclick="addCustomNoodleToCart('บะหมี่คลุก + ไก่กรอบ', 35, 4, 'line-1', 'sauce-1')">🏎️ เพิ่มลงตะกร้า</button>
+    </div>
+
+    <div class="menu-card">
+      <img src="../../images/menu/boiled-egg-noodles.jpg" class="menu-img" alt="บะหมี่คลุกไข่ต้ม">
+      <div class="menu-info">
+        <div class="menu-name">บะหมี่คลุก + ไข่ต้ม</div>
+        <div class="menu-price">฿35</div>
+        <div class="menu-time">⏱ ~3 นาที</div>
+      </div>
+      <div class="opt-block">
+        <div class="opt-container">
+          <label class="opt-label">เลือกเส้น:</label>
+          <select class="opt-select" id="line-2">
+            <option value="หมี่ขาว">หมี่ขาว</option>
+            <option value="บะหมี่กึ่งสำเร็จรูป">บะหมี่กึ่งสำเร็จรูป</option>
+          </select>
+        </div>
+        <div class="opt-container">
+          <label class="opt-label">เลือกซอส:</label>
+          <select class="opt-select" id="sauce-2">
+            <option value="ซอสมะขาม">ซอสมะขาม</option>
+            <option value="ซอสเทริยากิ">ซอสเทริยากิ</option>
+            <option value="ซอสรสชีส">ซอสรสชีส</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn" onclick="addCustomNoodleToCart('บะหมี่คลุก + ไข่ต้ม', 35, 3, 'line-2', 'sauce-2')">🏎️ เพิ่มลงตะกร้า</button>
+    </div>
+
+    <div class="menu-card">
+      <img src="../../images/menu/fried-egg-noodles.jpg" class="menu-img" alt="บะหมี่คลุกไข่ดาว">
+      <div class="menu-info">
+        <div class="menu-name">บะหมี่คลุก + ไข่ดาว</div>
+        <div class="menu-price">฿35</div>
+        <div class="menu-time">⏱ ~4 นาที</div>
+      </div>
+      <div class="opt-block">
+        <div class="opt-container">
+          <label class="opt-label">เลือกเส้น:</label>
+          <select class="opt-select" id="line-3">
+            <option value="หมี่ขาว">หมี่ขาว</option>
+            <option value="บะหมี่กึ่งสำเร็จรูป">บะหมี่กึ่งสำเร็จรูป</option>
+          </select>
+        </div>
+        <div class="opt-container">
+          <label class="opt-label">เลือกซอส:</label>
+          <select class="opt-select" id="sauce-3">
+            <option value="ซอสมะขาม">ซอสมะขาม</option>
+            <option value="ซอสเทริยากิ">ซอสเทริยากิ</option>
+            <option value="ซอสรสชีส">ซอสรสชีส</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn" onclick="addCustomNoodleToCart('บะหมี่คลุก + ไข่ดาว', 35, 4, 'line-3', 'sauce-3')">🏎️ เพิ่มลงตะกร้า</button>
+    </div>
+
+    <div class="menu-card">
+      <img src="../../images/menu/minced-chicken-noodles.jpg" class="menu-img" alt="บะหมี่คลุกไก่สับ">
+      <div class="menu-info">
+        <div class="menu-name">บะหมี่คลุก + ไก่สับ</div>
+        <div class="menu-price">฿35</div>
+        <div class="menu-time">⏱ ~4 นาที</div>
+      </div>
+      <div class="opt-block">
+        <div class="opt-container">
+          <label class="opt-label">เลือกเส้น:</label>
+          <select class="opt-select" id="line-4">
+            <option value="หมี่ขาว">หมี่ขาว</option>
+            <option value="บะหมี่กึ่งสำเร็จรูป">บะหมี่กึ่งสำเร็จรูป</option>
+          </select>
+        </div>
+        <div class="opt-container">
+          <label class="opt-label">เลือกซอส:</label>
+          <select class="opt-select" id="sauce-4">
+            <option value="ซอสมะขาม">ซอสมะขาม</option>
+            <option value="ซอสเทริยากิ">ซอสเทริยากิ</option>
+            <option value="ซอสรสชีส">ซอสรสชีส</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn" onclick="addCustomNoodleToCart('บะหมี่คลุก + ไก่สับ', 35, 4, 'line-4', 'sauce-4')">🏎️ เพิ่มลงตะกร้า</button>
+    </div>
+
+    <div class="menu-card">
+      <img src="../../images/menu/minced-pork-noodles.jpg" class="menu-img" alt="บะหมี่คลุกหมูสับ">
+      <div class="menu-info">
+        <div class="menu-name">บะหมี่คลุก + หมูสับ</div>
+        <div class="menu-price">฿35</div>
+        <div class="menu-time">⏱ ~4 นาที</div>
+      </div>
+      <div class="opt-block">
+        <div class="opt-container">
+          <label class="opt-label">เลือกเส้น:</label>
+          <select class="opt-select" id="line-5">
+            <option value="หมี่ขาว">หมี่ขาว</option>
+            <option value="บะหมี่กึ่งสำเร็จรูป">บะหมี่กึ่งสำเร็จรูป</option>
+          </select>
+        </div>
+        <div class="opt-container">
+          <label class="opt-label">เลือกซอส:</label>
+          <select class="opt-select" id="sauce-5">
+            <option value="ซอสมะขาม">ซอสมะขาม</option>
+            <option value="ซอสเทริยากิ">ซอสเทริยากิ</option>
+            <option value="ซอสรสชีส">ซอสรสชีส</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn" onclick="addCustomNoodleToCart('บะหมี่คลุก + หมูสับ', 35, 4, 'line-5', 'sauce-5')">🏎️ เพิ่มลงตะกร้า</button>
+    </div>
+
+    <div class="menu-card">
+      <img src="../../images/menu/shrimp-egg-noodles.jpg" class="menu-img" alt="บะหมี่คลุกไข่กุ้ง">
+      <div class="menu-info">
+        <div class="menu-name">บะหมี่คลุก + ไข่กุ้ง</div>
+        <div class="menu-price">฿35</div>
+        <div class="menu-time">⏱ ~4 นาที</div>
+      </div>
+      <div class="opt-block">
+        <div class="opt-container">
+          <label class="opt-label">เลือกเส้น:</label>
+          <select class="opt-select" id="line-6">
+            <option value="หมี่ขาว">หมี่ขาว</option>
+            <option value="บะหมี่กึ่งสำเร็จรูป">บะหมี่กึ่งสำเร็จรูป</option>
+          </select>
+        </div>
+        <div class="opt-container">
+          <label class="opt-label">เลือกซอส:</label>
+          <select class="opt-select" id="sauce-6">
+            <option value="ซอสมะขาม">ซอสมะขาม</option>
+            <option value="ซอสเทริยากิ">ซอสเทริยากิ</option>
+            <option value="ซอสรสชีส">ซอสรสชีส</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn" onclick="addCustomNoodleToCart('บะหมี่คลุก + ไข่กุ้ง', 35, 4, 'line-6', 'sauce-6')">🏎️ เพิ่มลงตะกร้า</button>
+    </div>
+
+    <div class="menu-card">
+      <img src="../../images/menu/pork-crackle-noodles.jpg" class="menu-img" alt="บะหมี่คลุกกากหมู">
+      <div class="menu-info">
+        <div class="menu-name">บะหมี่คลุก + กากหมู</div>
+        <div class="menu-price">฿35</div>
+        <div class="menu-time">⏱ ~3 นาที</div>
+      </div>
+      <div class="opt-block">
+        <div class="opt-container">
+          <label class="opt-label">เลือกเส้น:</label>
+          <select class="opt-select" id="line-7">
+            <option value="หมี่ขาว">หมี่ขาว</option>
+            <option value="บะหมี่กึ่งสำเร็จรูป">บะหมี่กึ่งสำเร็จรูป</option>
+          </select>
+        </div>
+        <div class="opt-container">
+          <label class="opt-label">เลือกซอส:</label>
+          <select class="opt-select" id="sauce-7">
+            <option value="ซอสมะขาม">ซоสมะขาม</option>
+            <option value="ซอสเทริยากิ">ซอสเทริยากิ</option>
+            <option value="ซอสรสชีส">ซอสรสชีส</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn" onclick="addCustomNoodleToCart('บะหมี่คลุก + กากหมู', 35, 3, 'line-7', 'sauce-7')">🏎️ เพิ่มลงตะกร้า</button>
+    </div>
+
+    <div class="menu-card">
+      <img src="../../images/menu/seaweed-noodles.jpg" class="menu-img" alt="บะหมี่คลุกสาหร่ายฝอย">
+      <div class="menu-info">
+        <div class="menu-name">บะหมี่คลุก + สาหร่ายฝอย</div>
+        <div class="menu-price">฿35</div>
+        <div class="menu-time">⏱ ~3 นาที</div>
+      </div>
+      <div class="opt-block">
+        <div class="opt-container">
+          <label class="opt-label">เลือกเส้น:</label>
+          <select class="opt-select" id="line-8">
+            <option value="หมี่ขาว">หมี่ขาว</option>
+            <option value="บะหมี่กึ่งสำเร็จรูป">บะหมี่กึ่งสำเร็จรูป</option>
+          </select>
+        </div>
+        <div class="opt-container">
+          <label class="opt-label">เลือกซอส:</label>
+          <select class="opt-select" id="sauce-8">
+            <option value="ซอสมะขาม">ซอสมะขาม</option>
+            <option value="ซอสเทริยากิ">ซอสเทริยากิ</option>
+            <option value="ซอสรสชีส">ซอสรสชีส</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn" onclick="addCustomNoodleToCart('บะหมี่คลุก + สาหร่ายฝอย', 35, 3, 'line-8', 'sauce-8')">🏎️ เพิ่มลงตะกร้า</button>
+    </div>
+
+  </div>
+</div>
+
+<div class="cart-bar" id="cartBar">
+  <div class="cart-bar-info">
+    <span class="cart-bar-count" id="cartCount">เลือกแล้ว 0 รายการ</span>
+    <span class="cart-bar-total" id="cartTotalText">฿0</span>
+  </div>
+  <button class="btn btn-checkout" onclick="openCart()">ดูตะกร้ากลาง</button>
+</div>
+
+<div class="cart-modal" id="cartModal">
+  <div class="cart-modal-content">
+    <div class="cart-modal-header">
+      <h3 class="cart-modal-title">🛒 ตะกร้ากลาง</h3>
+      <button class="cart-close-btn" onclick="closeCart()">✕</button>
+    </div>
+    <div class="cart-items-container" id="cartItemsContainer">
+      <div class="cart-empty">ตะกร้ายังไม่มีออเดอร์อาหาร</div>
+    </div>
+    <div class="cart-summary" id="cartSummary" style="display: none;">
+      <div class="summary-row">
+        <span>รวมจำนวน:</span>
+        <span id="summaryQty">0 ชิ้น</span>
+      </div>
+      <div class="summary-row">
+        <span>ยอดรวม:</span>
+        <span id="summaryTotal">฿0</span>
+      </div>
+    </div>
+    <div class="cart-actions" id="cartActions" style="display: none;">
+      <button class="btn-checkout-modal" onclick="goToCheckout()">💳 ไปหน้าจ่ายเงิน</button>
+      <button class="btn-clear-modal" onclick="clearCart()">🗑️ ล้างตะกร้า</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+function loadUserSession() {
+  try {
+    const userData = JSON.parse(localStorage.getItem('uniQueueUser'));
+    if (userData && userData.displayName && userData.telegramChatId) {
+      const nameInput = document.getElementById('custName');
+      const tgInput = document.getElementById('tgId');
+      if (nameInput && tgInput) {
+        nameInput.value = userData.displayName;
+        nameInput.setAttribute('value', userData.displayName);
+        tgInput.value = userData.telegramChatId;
+        tgInput.setAttribute('value', userData.telegramChatId);
+      }
+    }
+  } catch(e) { console.error(e); }
+}
+loadUserSession();
+window.addEventListener('DOMContentLoaded', loadUserSession);
+
+function toast(msg, err = false) {
+  const el = document.getElementById('toast');
+  if (el) {
+    el.textContent = msg;
+    el.className = 'show' + (err ? ' err' : '');
+    setTimeout(() => el.className = '', 3000);
+  }
+}
+</script>
+
+<script type="module">
+import { initializeApp }   from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot }
+  from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const app = initializeApp({
+  apiKey: "AIzaSyAGg-Xsst8kkL0DyZ6Ay4o3dnmBg6pVps0",
+  authDomain: "uniqueue-1e6a9.firebaseapp.com",
+  projectId: "uniqueue-1e6a9",
+  storageBucket: "uniqueue-1e6a9.firebasestorage.app",
+  messagingSenderId: "704755349414",
+  appId: "1:704755349414:web:119ff42eef7ff0bcc98167"
+});
+const db = getFirestore(app);
+
+// กำหนดโครงสร้างหลังบ้านสำหรับร้านไก่จ๋าบะหมี่คลุก (ใช้โค้ดรหัสร้าน shop6 และ orders_shop6 ถัดจากร้านที่ 5)
+const COLLECTION_NAME = "orders_shop6"; 
+const SHOP_ID = "shop6"; 
+const CART_KEY = "uniQueueCart";
+
+let globalCart = [];
+
+function loadGlobalCart() {
+  try {
+    const savedCart = localStorage.getItem(CART_KEY);
+    globalCart = savedCart ? JSON.parse(savedCart) : [];
+    return globalCart;
+  } catch (e) { 
+    console.error(e); 
+    globalCart = [];
+    return [];
+  }
+}
+
+function saveCart() {
+  localStorage.setItem(CART_KEY, JSON.stringify(globalCart));
+}
+
+function updateCartBar() {
+  loadGlobalCart();
+  const bar = document.getElementById('cartBar');
+  const countEl = document.getElementById('cartCount');
+  const totalEl = document.getElementById('cartTotalText');
+  
+  if (!bar || !countEl || !totalEl) return;
+  
+  if (globalCart.length === 0) {
+    bar.classList.remove('active');
+    return;
+  }
+  
+  let totalQty = 0;
+  let totalPrice = 0;
+  globalCart.forEach(item => {
+    totalQty += item.qty;
+    totalPrice += (item.price * item.qty);
+  });
+  
+  countEl.textContent = `เลือกแล้ว ${totalQty} ชิ้นในตะกร้ากลาง`;
+  totalEl.textContent = `฿${totalPrice}`;
+  bar.classList.add('active');
+}
+
+function renderCartItems() {
+  const cart = loadGlobalCart();
+  const container = document.getElementById('cartItemsContainer');
+  const summary = document.getElementById('cartSummary');
+  const actions = document.getElementById('cartActions');
+
+  if (!container || !summary || !actions) return;
+
+  if (cart.length === 0) {
+    container.innerHTML = '<div class="cart-empty">ตะกร้ายังไม่มีอาหาร</div>';
+    summary.style.display = 'none';
+    actions.style.display = 'none';
+    return;
+  }
+
+  let html = '';
+  let totalPrice = 0;
+  let totalQty = 0;
+
+  cart.forEach((item, index) => {
+    const itemTotal = item.price * item.qty;
+    totalPrice += itemTotal;
+    totalQty += item.qty;
+
+    html += `
+      <div class="cart-item">
+        <div class="cart-item-info">
+          <div class="cart-item-name">${item.menu}</div>
+          <div class="cart-item-meta">${item.shopName} • ฿${item.price}/ชิ้น</div>
+        </div>
+        <div class="cart-item-qty">
+          <button class="qty-btn" onclick="decreaseQty(${index})">−</button>
+          <span>${item.qty}</span>
+          <button class="qty-btn" onclick="increaseQty(${index})">+</button>
+        </div>
+        <div class="cart-item-total">฿${itemTotal}</div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+  document.getElementById('summaryQty').innerText = totalQty + ' ชิ้น';
+  document.getElementById('summaryTotal').innerText = '฿' + totalPrice;
+  summary.style.display = 'block';
+  actions.style.display = 'flex';
+}
+
+function increaseQty(index) {
+  if (globalCart[index]) {
+    globalCart[index].qty += 1;
+    saveCart();
+    updateCartBar();
+    renderCartItems();
+  }
+}
+
+function decreaseQty(index) {
+  if (globalCart[index]) {
+    if (globalCart[index].qty > 1) {
+      globalCart[index].qty -= 1;
+    } else {
+      globalCart.splice(index, 1);
+    }
+    saveCart();
+    updateCartBar();
+    renderCartItems();
+  }
+}
+
+function clearCart() {
+  if (confirm('คุณต้องการล้างตะกร้าทั้งหมดใช่หรือไม่?')) {
+    localStorage.removeItem(CART_KEY);
+    globalCart = [];
+    updateCartBar();
+    renderCartItems();
+  }
+}
+
+function openCart() {
+  renderCartItems();
+  document.getElementById('cartModal').classList.add('open');
+}
+
+function closeCart() {
+  document.getElementById('cartModal').classList.remove('open');
+}
+
+function goToCheckout() {
+  loadGlobalCart();
+  if (globalCart.length === 0) {
+    alert('ตะกร้ายังไม่มีรายการอาหาร');
+    return;
+  }
+  closeCart();
+  window.location.href = '../../checkout.html';
+}
+
+window.increaseQty = increaseQty;
+window.decreaseQty = decreaseQty;
+window.clearCart = clearCart;
+window.openCart = openCart;
+window.closeCart = closeCart;
+window.goToCheckout = goToCheckout;
+
+updateCartBar();
+
+function verifyUser() {
+  try {
+    const userData = JSON.parse(localStorage.getItem('uniQueueUser'));
+    if (userData && userData.displayName && userData.telegramChatId) {
+      document.getElementById('custName').value = userData.displayName;
+      document.getElementById('tgId').value = userData.telegramChatId;
+    }
+  } catch(e) {}
+
+  const name = document.getElementById('custName').value.trim();
+  const tg   = document.getElementById('tgId').value.trim();
+  
+  if (!name || !tg) {
+    toast('⚠️ ไม่พบข้อมูลล็อกอินของคุณ กรุณากลับไปหน้าหลักเพื่อลงทะเบียนเข้าสู่ระบบก่อนครับ', true);
+    return false;
+  }
+  return true;
+}
+
+window.addCustomNoodleToCart = (menuName, price, time, lineId, sauceId) => {
+  if (!verifyUser()) return;
+  
+  const lineType = document.getElementById(lineId).value;
+  const sauceType = document.getElementById(sauceId).value;
+  const fullMenuName = `${menuName} [${lineType} / ${sauceType}]`;
+
+  loadGlobalCart();
+  const existingItem = globalCart.find(item => item.menu === fullMenuName && item.shopId === SHOP_ID);
+  if (existingItem) {
+    existingItem.qty += 1;
+  } else {
+    globalCart.push({ 
+      shopId: SHOP_ID, 
+      shopName: "ร้านไก่จ๋า บะหมี่คลุกแต่งซิ่ง",
+      menu: fullMenuName, 
+      price: price, 
+      time: time, 
+      qty: 1 
+    });
+  }
+  saveCart();
+  updateCartBar();
+  toast(`🏁 เพิ่ม ${fullMenuName} ลงตะกร้าแล้ว!`);
+};
+
+// ตรวจจับคิวและเวลาเรียลไทม์ผ่าน Firebase Firestore
+onSnapshot(collection(db, COLLECTION_NAME), snap => {
+  let count = 0, time = 0;
+  const todayStart = new Date();
+  todayStart.setHours(0,0,0,0);
+
+  snap.forEach(d => {
+    const data = d.data();
+    const orderTime = data.timestamp ? data.timestamp.toDate() : new Date();
+
+    if (orderTime >= todayStart && (data.status === "waiting" || data.status === "cooking")) {
+      count++;
+      time += data.avgTime || 0;
+    }
+  });
+  document.getElementById('totalQ').textContent  = count;
+  document.getElementById('waitTime').textContent = time;
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UniQueue – ระบบตะกร้าร้าน Me Waffle</title>
+<link rel="manifest" href="../../manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --cream:     #FFFDF9;
+  --warm:      #FDF0D5;
+  --terra:     #8B5A2B;
+  --terra-dk:  #5C3A1A;
+  --amber:     #F4A261;
+  --sage:      #E76F51;
+  --ink:       #3D2612;
+  --muted:     #8D7B68;
+  --border:    #E6CCB2;
+  --white:     #FFFFFF;
+  --r:         18px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Sarabun', sans-serif;
+  background: var(--cream);
+  color: var(--ink);
+  min-height: 100dvh;
+  padding-bottom: 90px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hero {
+  background: var(--terra);
+  padding: 40px 20px 64px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.hero::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: 0; right: 0;
+  height: 32px;
+  background: var(--cream);
+  border-radius: 32px 32px 0 0;
+}
+.hero-img {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  border: 3px solid rgba(255,255,255,0.4);
+  object-fit: cover;
+  margin-bottom: 14px;
+  background: var(--white);
+}
+.hero h1 { font-size: 1.6rem; font-weight: 700; color: #fff; letter-spacing: -0.5px; }
+.hero p { font-size: 0.85rem; color: rgba(255,255,255,0.75); font-weight: 300; margin-top: 4px; }
+
+.wrap { max-width: 480px; margin: 0 auto; padding: 0 16px 48px; margin-top: -32px; position: relative; z-index: 1; }
+
+.back-btn-container { margin-bottom: 16px; }
+.back-btn { 
+  display: inline-flex; 
+  align-items: center; 
+  gap: 6px;
+  font-size: 0.9rem; 
+  color: var(--terra); 
+  text-decoration: none; 
+  font-weight: 600; 
+  background: rgba(139,90,43,0.06);
+  padding: 8px 16px;
+  border-radius: 50px;
+  transition: background 0.2s;
+}
+.back-btn:hover { background: rgba(139,90,43,0.12); }
+
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 22px; }
+.stat { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 18px 16px; box-shadow: 0 2px 8px rgba(61,38,18,0.05); }
+.stat-label { font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 6px; }
+.stat-num { font-size: 2.4rem; font-weight: 700; line-height: 1; color: var(--terra); }
+.stat-unit { font-size: 0.72rem; color: var(--muted); margin-top: 3px; }
+
+.divider { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; font-size: 0.8rem; font-weight: 600; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+.divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* MENU GRID */
+.menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.menu-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--r); padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(61,38,18,0.05); }
+.menu-img { width: 100%; height: 110px; border-radius: 12px; object-fit: cover; background: var(--warm); }
+.menu-info { width: 100%; }
+.menu-name { font-size: 0.88rem; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.menu-price { font-size: 1rem; font-weight: 700; color: var(--terra); margin-top: 2px; }
+.menu-time { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
+
+.btn {
+  background: var(--terra); color: #fff; border: none; border-radius: 50px; padding: 9px 0; width: 100%;
+  font-family: 'Sarabun', sans-serif; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+  transition: background .15s, transform .1s; box-shadow: 0 3px 10px rgba(139,90,43,0.25);
+}
+.btn:hover  { background: var(--terra-dk); }
+.btn:active { transform: scale(.93); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* แถบตะกร้าลอยด้านล่าง */
+.cart-bar {
+  position: fixed; bottom: 0; left: 0; right: 0; background: var(--white);
+  border-top: 1px solid var(--border); box-shadow: 0 -4px 15px rgba(0,0,0,0.08);
+  padding: 14px 20px; display: flex; justify-content: space-between; align-items: center;
+  z-index: 900; transform: translateY(100%); transition: transform 0.3s ease;
+}
+.cart-bar.active { transform: translateY(0); }
+.cart-bar-info { display: flex; flex-direction: column; }
+.cart-bar-count { font-size: 0.85rem; color: var(--muted); font-weight: 500; }
+.cart-bar-total { font-size: 1.3rem; font-weight: 800; color: var(--terra); }
+.btn-checkout { max-width: 180px; padding: 12px 24px; font-size: 0.95rem; }
+
+#toast {
+  position: fixed; bottom: 95px; left: 50%; transform: translateX(-50%) translateY(12px);
+  background: var(--ink); color: #fff; padding: 12px 22px; border-radius: 50px;
+  font-size: 0.85rem; font-weight: 500; pointer-events: none; opacity: 0;
+  transition: opacity .25s, transform .25s; z-index: 999; white-space: nowrap; max-width: 90vw;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+#toast.err  { background: #C0392B; }
+
+/* 🛒 ตะกร้า Modal */
+.cart-modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(61, 38, 18, 0.5);
+  display: flex;
+  align-items: flex-end;
+  z-index: 1000;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.3s ease;
+  padding: 16px;
+}
+.cart-modal.open { opacity: 1; pointer-events: auto; }
+.cart-modal-content {
+  background: var(--white);
+  border-radius: 24px 24px 0 0;
+  width: 100%;
+  max-width: 500px;
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 24px;
+  box-shadow: 0 -10px 25px rgba(0,0,0,0.2);
+  margin: 0 auto;
+}
+.cart-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.cart-modal-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+.cart-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--muted);
+}
+.cart-items-container {
+  margin-bottom: 20px;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+.cart-item {
+  background: var(--cream);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.cart-item-info {
+  flex: 1;
+}
+.cart-item-name {
+  font-weight: 600;
+  color: var(--ink);
+}
+.cart-item-meta {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.cart-item-qty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.qty-btn {
+  background: var(--terra);
+  color: white;
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.qty-btn:hover { background: var(--terra-dk); }
+.cart-item-total {
+  margin-left: 12px;
+  font-weight: 700;
+  color: var(--terra);
+  min-width: 60px;
+  text-align: right;
+}
+.cart-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--muted);
+}
+.cart-summary {
+  background: var(--cream);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+}
+.summary-row:last-child {
+  margin-bottom: 0;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--terra);
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+.cart-actions {
+  display: flex;
+  gap: 12px;
+}
+.btn-checkout-modal {
+  flex: 1;
+  background: var(--terra);
+  color: white;
+  border: none;
+  padding: 14px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+.btn-checkout-modal:hover { background: var(--terra-dk); }
+.btn-clear-modal {
+  flex: 1;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 14px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+.btn-clear-modal:hover { background: var(--cream); }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <img src="https://i.pinimg.com/originals/9f/fa/b1/9ffab177196096da749a909ef4cb5dae.gif" class="hero-img" alt="logo">
+  <h1>ร้าน Me Waffle</h1>
+  <p>Freshly Baked Waffles, No more queue.</p>
+</div>
+
+<div class="wrap">
+  <div class="back-btn-container">
+    <a href="../../index.html" class="back-btn">⬅️ กลับไปหน้ารวมร้านค้า</a>
+  </div>
+
+  <input type="hidden" id="custName">
+  <input type="hidden" id="tgId">
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-label">คิวรออยู่</div>
+      <div class="stat-num" id="totalQ">0</div>
+      <div class="stat-unit">ชุดออเดอร์</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">เวลารอประมาณ</div>
+      <div class="stat-num" id="waitTime">0</div>
+      <div class="stat-unit">นาที</div>
+    </div>
+  </div>
+
+  <div class="divider">🧇 รายการวาฟเฟิล (ชิ้นละ 10 บาท)</div>
+
+  <div class="menu-grid">
+    <div class="menu-card">
+      <img src="../../images/menu/mixed-fruit.jpg" class="menu-img" alt="ผลไม้รวม">
+      <div class="menu-info"><div class="menu-name">ผลไม้รวม (Mixed Fruit)</div><div class="menu-price">฿10</div><div class="menu-time">⏱ ~5 นาที</div></div>
+      <button class="btn" onclick="addToCart('ผลไม้รวม', 10, 5)">🛒 เพิ่มลงตะกร้า</button>
+    </div>
+    <div class="menu-card">
+      <img src="../../images/menu/taro.jpg" class="menu-img" alt="เผือก">
+      <div class="menu-info"><div class="menu-name">เผือก (Taro)</div><div class="menu-price">฿10</div><div class="menu-time">⏱ ~5 นาที</div></div>
+      <button class="btn" onclick="addToCart('เผือก', 10, 5)">🛒 เพิ่มลงตะกร้า</button>
+    </div>
+    <div class="menu-card">
+      <img src="../../images/menu/cream.jpg" class="menu-img" alt="ครีม">
+      <div class="menu-info"><div class="menu-name">ครีม (Cream)</div><div class="menu-price">฿10</div><div class="menu-time">⏱ ~5 นาที</div></div>
+      <button class="btn" onclick="addToCart('ครีม', 10, 5)">🛒 เพิ่มลงตะกร้า</button>
+    </div>
+    <div class="menu-card">
+      <img src="../../images/menu/original.jpg" class="menu-img" alt="เนย น้ำตาล">
+      <div class="menu-info"><div class="menu-name">เนย น้ำตาล (Original)</div><div class="menu-price">฿10</div><div class="menu-time">⏱ ~5 นาที</div></div>
+      <button class="btn" onclick="addToCart('เนย น้ำตาล', 10, 5)">🛒 เพิ่มลงตะกร้า</button>
+    </div>
+    <div class="menu-card">
+      <img src="../../images/menu/currant.jpg" class="menu-img" alt="ลูกเกด">
+      <div class="menu-info"><div class="menu-name">ลูกเกด (Currant)</div><div class="menu-price">฿10</div><div class="menu-time">⏱ ~5 นาที</div></div>
+      <button class="btn" onclick="addToCart('ลูกเกด', 10, 5)">🛒 เพิ่มลงตะกร้า</button>
+    </div>
+    <div class="menu-card">
+      <img src="../../images/menu/pandan-custard.jpg" class="menu-img" alt="สังขยา">
+      <div class="menu-info"><div class="menu-name">สังขยา (Pandan Custard)</div><div class="menu-price">฿10</div><div class="menu-time">⏱ ~5 นาที</div></div>
+      <button class="btn" onclick="addToCart('สังขยา', 10, 5)">🛒 เพิ่มลงตะกร้า</button>
+    </div>
+    <div class="menu-card">
+      <img src="../../images/menu/egg-threads.jpg" class="menu-img" alt="ฝอยทอง">
+      <div class="menu-info"><div class="menu-name">ฝอยทอง (Egg Threads)</div><div class="menu-price">฿10</div><div class="menu-time">⏱ ~5 นาที</div></div>
+      <button class="btn" onclick="addToCart('ฝอยทอง', 10, 5)">🛒 เพิ่มลงตะกร้า</button>
+    </div>
+    <div class="menu-card">
+      <img src="../../images/menu/cheese.jpg" class="menu-img" alt="ชีส">
+      <div class="menu-info"><div class="menu-name">ชีส (Cheese)</div><div class="menu-price">฿10</div><div class="menu-time">⏱ ~5 นาที</div></div>
+      <button class="btn" onclick="addToCart('ชีส', 10, 5)">🛒 เพิ่มลงตะกร้า</button>
+    </div>
+    <div class="menu-card">
+      <img src="../../images/menu/chocolate.jpg" class="menu-img" alt="ช็อกโกแลต">
+      <div class="menu-info"><div class="menu-name">ช็อกโกแลต (Chocolate)</div><div class="menu-price">฿10</div><div class="menu-time">⏱ ~5 นาที</div></div>
+      <button class="btn" onclick="addToCart('ช็อกโกแลต', 10, 5)">🛒 เพิ่มลงตะกร้า</button>
+    </div>
+    <div class="menu-card">
+      <img src="../../images/menu/almond.jpg" class="menu-img" alt="อัลมอนด์">
+      <div class="menu-info"><div class="menu-name">อัลมอนด์ (Almond)</div><div class="menu-price">฿10</div><div class="menu-time">⏱ ~5 นาที</div></div>
+      <button class="btn" onclick="addToCart('อัลมอนด์', 10, 5)">🛒 เพิ่มลงตะกร้า</button>
+    </div>
+    <div class="menu-card">
+      <img src="../../images/menu/corn.jpg" class="menu-img" alt="ข้าวโพด">
+      <div class="menu-info"><div class="menu-name">ข้าวโพด (Corn)</div><div class="menu-price">฿10</div><div class="menu-time">⏱ ~5 นาที</div></div>
+      <button class="btn" onclick="addToCart('ข้าวโพด', 10, 5)">🛒 เพิ่มลงตะกร้า</button>
+    </div>
+    <div class="menu-card">
+      <img src="../../images/menu/strawberry.jpg" class="menu-img" alt="สตรอว์เบอร์รี่">
+      <div class="menu-info"><div class="menu-name">สตรอว์เบอร์รี่ (Strawberry)</div><div class="menu-price">฿10</div><div class="menu-time">⏱ ~5 นาที</div></div>
+      <button class="btn" onclick="addToCart('สตรอว์เบอร์รี่', 10, 5)">🛒 เพิ่มลงตะกร้า</button>
+    </div>
+  </div>
+</div>
+
+<div class="cart-bar" id="cartBar">
+  <div class="cart-bar-info">
+    <span class="cart-bar-count" id="cartCount">เลือกแล้ว 0 รายการ</span>
+    <span class="cart-bar-total" id="cartTotalText">฿0</span>
+  </div>
+  <button class="btn btn-checkout" onclick="openCart()">ดูตะกร้ากลาง</button>
+</div>
+
+<div class="cart-modal" id="cartModal">
+  <div class="cart-modal-content">
+    <div class="cart-modal-header">
+      <h3 class="cart-modal-title">🛒 ตะกร้ากลาง</h3>
+      <button class="cart-close-btn" onclick="closeCart()">✕</button>
+    </div>
+    
+    <div class="cart-items-container" id="cartItemsContainer">
+      <div class="cart-empty">ตะกร้ายังไม่มีอาหาร</div>
+    </div>
+
+    <div class="cart-summary" id="cartSummary" style="display: none;">
+      <div class="summary-row">
+        <span>รวมจำนวน:</span>
+        <span id="summaryQty">0 ชิ้น</span>
+      </div>
+      <div class="summary-row">
+        <span>ยอดรวม:</span>
+        <span id="summaryTotal">฿0</span>
+      </div>
+    </div>
+
+    <div class="cart-actions" id="cartActions" style="display: none;">
+      <button class="btn-checkout-modal" onclick="goToCheckout()">💳 ไปหน้าจ่ายเงิน</button>
+      <button class="btn-clear-modal" onclick="clearCart()">🗑️ ล้างตะกร้า</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+function loadUserSession() {
+  try {
+    const userData = JSON.parse(localStorage.getItem('uniQueueUser'));
+    if (userData && userData.displayName && userData.telegramChatId) {
+      const nameInput = document.getElementById('custName');
+      const tgInput = document.getElementById('tgId');
+      if (nameInput && tgInput) {
+        nameInput.value = userData.displayName;
+        nameInput.setAttribute('value', userData.displayName);
+        tgInput.value = userData.telegramChatId;
+        tgInput.setAttribute('value', userData.telegramChatId);
+      }
+    }
+  } catch(e) { console.error(e); }
+}
+loadUserSession();
+window.addEventListener('DOMContentLoaded', loadUserSession);
+
+function toast(msg, err = false) {
+  const el = document.getElementById('toast');
+  if (el) {
+    el.textContent = msg;
+    el.className = 'show' + (err ? ' err' : '');
+    setTimeout(() => el.className = '', 3000);
+  }
+}
+</script>
+
+<script type="module">
+import { initializeApp }   from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot }
+  from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const app = initializeApp({
+  apiKey: "AIzaSyAGg-Xsst8kkL0DyZ6Ay4o3dnmBg6pVps0",
+  authDomain: "uniqueue-1e6a9.firebaseapp.com",
+  projectId: "uniqueue-1e6a9",
+  storageBucket: "uniqueue-1e6a9.firebasestorage.app",
+  messagingSenderId: "704755349414",
+  appId: "1:704755349414:web:119ff42eef7ff0bcc98167"
+});
+const db = getFirestore(app);
+
+// เปลี่ยนเป็นของระบบร้านที่ 2 เพื่อป้องกันการดึงคิวสลับร้านกัน
+const BOT    = "8323462769:AAEmNAEfekbPLnyG249X-W519mb20onsFnA";
+const VENDOR = "7699435873";
+const COLLECTION_NAME = "orders_shop2"; 
+const SHOP_ID = "shop2"; 
+const CART_KEY = "uniQueueCart";
+
+let globalCart = [];
+
+function loadGlobalCart() {
+  try {
+    const savedCart = localStorage.getItem(CART_KEY);
+    globalCart = savedCart ? JSON.parse(savedCart) : [];
+    return globalCart;
+  } catch (e) { 
+    console.error("Error loading cart:", e); 
+    globalCart = [];
+    return [];
+  }
+}
+
+function saveCart() {
+  localStorage.setItem(CART_KEY, JSON.stringify(globalCart));
+}
+
+function updateCartBar() {
+  loadGlobalCart();
+  const bar = document.getElementById('cartBar');
+  const countEl = document.getElementById('cartCount');
+  const totalEl = document.getElementById('cartTotalText');
+  
+  if (!bar || !countEl || !totalEl) return;
+  
+  if (globalCart.length === 0) {
+    bar.classList.remove('active');
+    return;
+  }
+  
+  let totalQty = 0;
+  let totalPrice = 0;
+  globalCart.forEach(item => {
+    totalQty += item.qty;
+    totalPrice += (item.price * item.qty);
+  });
+  
+  countEl.textContent = `เลือกแล้ว ${totalQty} ชิ้นในตะกร้ากลาง`;
+  totalEl.textContent = `฿${totalPrice}`;
+  bar.classList.add('active');
+}
+
+function renderCartItems() {
+  const cart = loadGlobalCart();
+  const container = document.getElementById('cartItemsContainer');
+  const summary = document.getElementById('cartSummary');
+  const actions = document.getElementById('cartActions');
+
+  if (!container || !summary || !actions) return;
+
+  if (cart.length === 0) {
+    container.innerHTML = '<div class="cart-empty">ตะกร้ายังไม่มีอาหาร</div>';
+    summary.style.display = 'none';
+    actions.style.display = 'none';
+    return;
+  }
+
+  let html = '';
+  let totalPrice = 0;
+  let totalQty = 0;
+
+  cart.forEach((item, index) => {
+    const itemTotal = item.price * item.qty;
+    totalPrice += itemTotal;
+    totalQty += item.qty;
+
+    html += `
+      <div class="cart-item">
+        <div class="cart-item-info">
+          <div class="cart-item-name">${item.menu}</div>
+          <div class="cart-item-meta">${item.shopName} • ฿${item.price}/ชิ้น</div>
+        </div>
+        <div class="cart-item-qty">
+          <button class="qty-btn" onclick="decreaseQty(${index})">−</button>
+          <span>${item.qty}</span>
+          <button class="qty-btn" onclick="increaseQty(${index})">+</button>
+        </div>
+        <div class="cart-item-total">฿${itemTotal}</div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+  document.getElementById('summaryQty').innerText = totalQty + ' ชิ้น';
+  document.getElementById('summaryTotal').innerText = '฿' + totalPrice;
+  summary.style.display = 'block';
+  actions.style.display = 'flex';
+}
+
+function increaseQty(index) {
+  if (globalCart[index]) {
+    globalCart[index].qty += 1;
+    saveCart();
+    updateCartBar();
+    renderCartItems();
+  }
+}
+
+function decreaseQty(index) {
+  if (globalCart[index]) {
+    if (globalCart[index].qty > 1) {
+      globalCart[index].qty -= 1;
+    } else {
+      globalCart.splice(index, 1);
+    }
+    saveCart();
+    updateCartBar();
+    renderCartItems();
+  }
+}
+
+function clearCart() {
+  if (confirm('คุณต้องการล้างตะกร้าทั้งหมดใช่หรือไม่?')) {
+    localStorage.removeItem(CART_KEY);
+    globalCart = [];
+    updateCartBar();
+    renderCartItems();
+  }
+}
+
+function openCart() {
+  renderCartItems();
+  document.getElementById('cartModal').classList.add('open');
+}
+
+function closeCart() {
+  document.getElementById('cartModal').classList.remove('open');
+}
+
+function goToCheckout() {
+  loadGlobalCart();
+  if (globalCart.length === 0) {
+    alert('ตะกร้ายังไม่มีอาหาร');
+    return;
+  }
+  closeCart();
+  window.location.href = '../../checkout.html';
+}
+
+window.increaseQty = increaseQty;
+window.decreaseQty = decreaseQty;
+window.clearCart = clearCart;
+window.openCart = openCart;
+window.closeCart = closeCart;
+window.goToCheckout = goToCheckout;
+
+updateCartBar();
+
+window.addToCart = (menu, price, time) => {
+  try {
+    const userData = JSON.parse(localStorage.getItem('uniQueueUser'));
+    if (userData && userData.displayName && userData.telegramChatId) {
+      document.getElementById('custName').value = userData.displayName;
+      document.getElementById('tgId').value = userData.telegramChatId;
+    }
+  } catch(e) {}
+
+  const name = document.getElementById('custName').value.trim();
+  const tg   = document.getElementById('tgId').value.trim();
+  
+  if (!name || !tg) return toast('⚠️ ไม่พบข้อมูลล็อกอินของคุณ กรุณากลับไปหน้าหลักเพื่อลงทะเบียนเข้าสู่ระบบก่อนครับ', true);
+
+  loadGlobalCart();
+
+  const existingItem = globalCart.find(item => item.menu === menu && item.shopId === SHOP_ID);
+  if (existingItem) {
+    existingItem.qty += 1;
+  } else {
+    globalCart.push({ 
+      shopId: SHOP_ID, 
+      shopName: "ร้าน Me Waffle",
+      menu: menu, 
+      price: price, 
+      time: time, 
+      qty: 1 
+    });
+  }
+  
+  saveCart();
+  updateCartBar();
+  toast(`➕ เพิ่ม ${menu} ลงในตะกร้ากลางแล้ว`);
+};
+
+onSnapshot(collection(db, COLLECTION_NAME), snap => {
+  let count = 0, time = 0;
+  const todayStart = new Date();
+  todayStart.setHours(0,0,0,0);
+
+  snap.forEach(d => {
+    const data = d.data();
+    const orderTime = data.timestamp ? data.timestamp.toDate() : new Date();
+
+    if (orderTime >= todayStart && (data.status === "waiting" || data.status === "cooking")) {
+      count++;
+      time += data.avgTime || 0;
+    }
+  });
+  document.getElementById('totalQ').textContent  = count;
+  document.getElementById('waitTime').textContent = time;
+});
+</script>
+</body>
+</html>
