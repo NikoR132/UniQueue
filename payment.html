@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ชำระเงิน – UniQueue</title>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -27,53 +28,272 @@
         window.serverTimestamp = serverTimestamp;
     </script>
     <style>
-        body { font-family: 'Sarabun', sans-serif; background: #FDF6EC; padding: 20px; color: #2C1810; }
-        .container { max-width: 500px; margin: 0 auto; background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-        h1 { color: #C8522A; text-align: center; }
-        .order-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
-        .total-price { font-size: 1.5rem; font-weight: 700; color: #C8522A; text-align: center; margin: 20px 0; }
-        .method-box { background: #f9f9f9; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
-        .pay-option { display: flex; align-items: center; gap: 10px; padding: 12px; margin-top: 10px; background: white; border: 2px solid #E8D5BC; border-radius: 10px; cursor: pointer; transition: border-color 0.2s; }
-        .pay-option:has(input:checked) { border-color: #C8522A; background: #FFF6EE; }
-        .pay-option input { width: 18px; height: 18px; accent-color: #C8522A; }
-        .pay-option span { font-weight: 500; }
-        .btn { display: block; width: 100%; background: #C8522A; color: white; padding: 15px; border-radius: 10px; text-align: center; text-decoration: none; font-weight: 600; border: none; cursor: pointer; margin-top: 10px; }
-        #qrCodeArea { display: none; text-align: center; margin-top: 15px; }
-        img.qr { width: 200px; border: 2px solid #E8D5BC; border-radius: 10px; }
+    :root {
+      --cream:    #FDF6EC;
+      --paper:    #FFFFFF;
+      --terra:    #C8522A;
+      --terra-dk: #A8391A;
+      --amber:    #E8912A;
+      --sage:     #7A9E7E;
+      --ink:      #2C1810;
+      --muted:    #9C8070;
+      --border:   #E8D5BC;
+      --r: 20px;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Sarabun', sans-serif;
+      background: var(--cream);
+      color: var(--ink);
+      padding: 20px 16px 100px;
+      -webkit-font-smoothing: antialiased;
+    }
+    .mono { font-family: 'Space Mono', monospace; }
+
+    .container { max-width: 480px; margin: 0 auto; }
+
+    .page-head { text-align: center; margin-bottom: 18px; }
+    .page-eyebrow {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--terra);
+      margin-bottom: 4px;
+    }
+    .page-head h1 { margin: 0; font-size: 1.4rem; font-weight: 700; color: var(--ink); }
+
+    /* ---------- Order ticket ---------- */
+    .ticket {
+      background: var(--paper);
+      border-radius: var(--r);
+      padding: 18px 18px 4px;
+      box-shadow: 0 6px 18px rgba(44,24,16,0.06);
+      margin-bottom: 18px;
+    }
+    .ticket-shop {
+      display: flex; align-items: center; gap: 10px;
+      padding-bottom: 12px;
+      border-bottom: 2px dashed var(--border);
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .ticket-shop .ic {
+      width: 32px; height: 32px; border-radius: 10px;
+      background: #FFF1E6; display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; flex-shrink: 0;
+    }
+    .order-item {
+      display: flex; justify-content: space-between; align-items: baseline;
+      padding: 10px 0; border-bottom: 1px dashed var(--border); font-size: 0.92rem;
+    }
+    .order-item:last-of-type { border-bottom: none; }
+    .oi-name { color: var(--ink); }
+    .oi-qty { color: var(--muted); font-size: 0.82rem; }
+    .oi-price { font-weight: 600; white-space: nowrap; }
+
+    .perf {
+      position: relative; height: 14px; margin: 0 -18px;
+      background:
+        radial-gradient(circle 7px at 0 0, transparent 7px, var(--cream) 7.5px) top left,
+        radial-gradient(circle 7px at 100% 0, transparent 7px, var(--cream) 7.5px) top right;
+      background-repeat: no-repeat;
+    }
+    .perf::after {
+      content: ''; position: absolute; left: 18px; right: 18px; top: 0;
+      border-top: 2px dashed var(--border);
+    }
+
+    .total-price {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 16px 18px;
+      background: var(--paper);
+      border-radius: var(--r);
+      margin-bottom: 18px;
+      box-shadow: 0 6px 18px rgba(44,24,16,0.06);
+    }
+    .total-price .tl-label { font-size: 0.8rem; color: var(--muted); font-weight: 600; }
+    .total-price .tl-value { font-size: 1.5rem; font-weight: 700; color: var(--terra); }
+
+    /* ---------- Payment method ---------- */
+    .section-label {
+      font-size: 0.82rem; font-weight: 700; color: var(--muted);
+      margin: 4px 2px 10px;
+    }
+    .method-box { margin-bottom: 18px; }
+    .pay-option {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px; margin-bottom: 10px;
+      background: var(--paper);
+      border: 2px solid var(--border);
+      border-radius: 14px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, transform 0.1s;
+    }
+    .pay-option:active { transform: scale(0.99); }
+    .pay-option:has(input:checked) {
+      border-color: var(--terra);
+      background: #FFF6EE;
+      box-shadow: 0 0 0 3px rgba(200,82,42,0.08);
+    }
+    .pay-option .ic {
+      width: 38px; height: 38px; border-radius: 10px;
+      background: var(--cream); display: flex; align-items: center; justify-content: center;
+      font-size: 1.15rem; flex-shrink: 0;
+    }
+    .pay-option input { width: 18px; height: 18px; accent-color: var(--terra); flex-shrink: 0; }
+    .pay-option .txt { font-weight: 600; font-size: 0.92rem; }
+    .pay-option .sub { font-size: 0.76rem; color: var(--muted); font-weight: 400; margin-top: 1px; }
+
+    #qrCodeArea {
+      display: none;
+      text-align: center;
+      background: var(--paper);
+      border: 1.5px dashed var(--border);
+      border-radius: var(--r);
+      padding: 18px;
+      margin-bottom: 18px;
+    }
+    #qrCodeArea p { margin: 0 0 12px; font-size: 0.86rem; color: var(--muted); font-weight: 600; }
+    img.qr { width: 190px; border: 2px solid var(--border); border-radius: 12px; }
+
+    /* ---------- Sticky action bar ---------- */
+    .action-bar {
+      position: fixed; left: 0; right: 0; bottom: 0;
+      background: var(--paper);
+      border-top: 1px solid var(--border);
+      padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+      box-shadow: 0 -8px 24px rgba(44,24,16,0.08);
+    }
+    .action-bar-inner { max-width: 480px; margin: 0 auto; display: flex; gap: 10px; }
+
+    .btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      background: var(--terra);
+      color: white;
+      padding: 14px;
+      border-radius: 12px;
+      text-align: center;
+      text-decoration: none;
+      font-weight: 600;
+      font-family: 'Sarabun', sans-serif;
+      font-size: 0.95rem;
+      border: none;
+      cursor: pointer;
+      flex: 1;
+      transition: background 0.15s, transform 0.1s, opacity 0.15s;
+    }
+    .btn:hover { background: var(--terra-dk); }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.65; cursor: not-allowed; transform: none; }
+    .btn-back {
+      background: none;
+      color: var(--muted);
+      flex: 0 0 auto;
+      padding: 14px 16px;
+      border: 1.5px solid var(--border);
+    }
+    .btn-back:hover { background: none; border-color: var(--terra); color: var(--terra-dk); }
+
+    /* ---------- Toast notifications ---------- */
+    .toast-stack {
+      position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+      z-index: 5000; display: flex; flex-direction: column; gap: 8px;
+      width: min(92vw, 380px); pointer-events: none;
+    }
+    .toast {
+      background: var(--ink); color: #fff; padding: 13px 16px;
+      border-radius: 12px; font-size: 0.88rem; font-weight: 600;
+      box-shadow: 0 10px 28px rgba(44,24,16,0.28);
+      display: flex; align-items: center; gap: 10px;
+      opacity: 0; transform: translateY(-12px) scale(0.98);
+      transition: opacity .25s ease, transform .25s ease;
+      pointer-events: auto;
+    }
+    .toast.show { opacity: 1; transform: translateY(0) scale(1); }
+    .toast.success { background: var(--sage); }
+    .toast.error { background: var(--terra-dk); }
+
+    /* ---------- QR reveal ---------- */
+    #qrCodeArea { transition: opacity 0.2s ease, transform 0.2s ease; }
+    #qrCodeArea.hiding { opacity: 0; transform: translateY(-6px); }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>ยืนยันการชำระเงิน</h1>
-        <div id="paymentDetails">กำลังโหลดรายการ...</div>
-        <div class="total-price" id="totalDisplay">฿0</div>
+        <div class="page-head">
+            <div class="page-eyebrow">Confirm &amp; Pay</div>
+            <h1>ยืนยันการชำระเงิน</h1>
+        </div>
 
+        <div class="ticket">
+            <div id="paymentDetails">กำลังโหลดรายการ...</div>
+            <div class="perf" id="perfSpacer" style="display:none;"></div>
+        </div>
+
+        <div class="total-price">
+            <span class="tl-label">ยอดชำระทั้งหมด</span>
+            <span class="tl-value mono" id="totalDisplay">฿0</span>
+        </div>
+
+        <div class="section-label">เลือกวิธีการชำระเงิน</div>
         <div class="method-box">
-            <label><strong>เลือกวิธีการชำระเงิน:</strong></label>
             <label class="pay-option">
+                <span class="ic">📱</span>
                 <input type="radio" name="payMethod" value="promptpay" onclick="togglePay(true)" checked>
-                <span>📱 คิวอาร์พร้อมเพย์ (PromptPay)</span>
+                <span>
+                    <div class="txt">คิวอาร์พร้อมเพย์ (PromptPay)</div>
+                    <div class="sub">สแกนจ่ายผ่านแอปธนาคาร</div>
+                </span>
             </label>
             <label class="pay-option">
+                <span class="ic">💵</span>
                 <input type="radio" name="payMethod" value="cash" onclick="togglePay(false)">
-                <span>💵 จ่ายเงินสดที่ร้าน (Cash)</span>
+                <span>
+                    <div class="txt">จ่ายเงินสดที่ร้าน (Cash)</div>
+                    <div class="sub">ชำระเมื่อไปรับอาหาร</div>
+                </span>
             </label>
         </div>
 
         <div id="qrCodeArea">
-            <p>แสกนคิวอาร์พร้อมเพย์เพื่อโอนเงิน:</p>
+            <p>แสกนคิวอาร์พร้อมเพย์เพื่อโอนเงิน</p>
             <img src="https://via.placeholder.com/200?text=PromptPay+QR" class="qr" alt="PromptPay QR Code">
         </div>
+    </div>
 
-        <button class="btn" onclick="confirmOrder()">ยืนยันออเดอร์</button>
-        <button class="btn" style="background:#9C8070;" onclick="history.back()">กลับไปแก้ไข</button>
+    <div class="action-bar">
+        <div class="action-bar-inner">
+            <button class="btn-back" style="border-radius:12px;" onclick="history.back()" aria-label="กลับไปแก้ไข">←</button>
+            <button class="btn" onclick="confirmOrder()">✅ ยืนยันออเดอร์</button>
+        </div>
     </div>
 
     <script>
+        function showToast(msg, type) {
+            let stack = document.getElementById('toastStack');
+            if (!stack) {
+                stack = document.createElement('div');
+                stack.id = 'toastStack';
+                stack.className = 'toast-stack';
+                document.body.appendChild(stack);
+            }
+            const t = document.createElement('div');
+            t.className = 'toast' + (type ? ' ' + type : '');
+            t.textContent = msg;
+            stack.appendChild(t);
+            requestAnimationFrame(() => t.classList.add('show'));
+            setTimeout(() => {
+                t.classList.remove('show');
+                setTimeout(() => t.remove(), 250);
+            }, 3200);
+        }
+
         const CART_KEY = 'uniQueueCart';
         const params = new URLSearchParams(window.location.search);
         const targetShopId = params.get('shopId');
-        
+
         function loadPaymentInfo() {
             const cart = JSON.parse(localStorage.getItem(CART_KEY)) || [];
             const shopItems = cart.filter(item => item.shopId == targetShopId);
@@ -81,33 +301,42 @@
                 document.getElementById('paymentDetails').innerHTML = "ไม่พบรายการของร้านนี้";
                 return;
             }
-            let html = `<h3>ร้าน: ${shopItems[0].shopName}</h3>`;
+            let html = `<div class="ticket-shop"><span class="ic">🏪</span><span>${shopItems[0].shopName}</span></div>`;
             let total = 0;
             shopItems.forEach(item => {
                 total += (item.price * item.qty);
-                html += `<div class="order-item"><span>${item.menu} x ${item.qty}</span> <span>฿${item.price * item.qty}</span></div>`;
+                html += `<div class="order-item"><span class="oi-name">${item.menu} <span class="oi-qty">x${item.qty}</span></span> <span class="oi-price mono">฿${item.price * item.qty}</span></div>`;
             });
             document.getElementById('paymentDetails').innerHTML = html;
-            document.getElementById('totalDisplay').textContent = "ยอดรวม: ฿" + total;
+            document.getElementById('perfSpacer').style.display = 'block';
+            document.getElementById('totalDisplay').textContent = "฿" + total;
         }
 
         function togglePay(showQr) {
-            document.getElementById('qrCodeArea').style.display = showQr ? 'block' : 'none';
+            const el = document.getElementById('qrCodeArea');
+            if (showQr) {
+                el.style.display = 'block';
+                el.classList.add('hiding');
+                requestAnimationFrame(() => el.classList.remove('hiding'));
+            } else {
+                el.classList.add('hiding');
+                setTimeout(() => { el.style.display = 'none'; }, 180);
+            }
         }
 
         async function confirmOrder() {
             // 👤 ดึงข้อมูลผู้ใช้ที่ล็อกอินอยู่จาก localStorage
             const currentUser = JSON.parse(localStorage.getItem('uniQueueUser')) || null;
             if (!currentUser || !currentUser.telegramChatId) {
-                alert('❌ ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบใหม่อีกครั้งที่หน้าแรก');
-                window.location.href = "index.html";
+                showToast('❌ ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบใหม่อีกครั้งที่หน้าแรก', 'error');
+                setTimeout(() => { window.location.href = "index.html"; }, 900);
                 return;
             }
 
             const cart = JSON.parse(localStorage.getItem(CART_KEY)) || [];
             const shopItems = cart.filter(item => item.shopId == targetShopId);
             if (shopItems.length === 0) {
-                alert('❌ ไม่พบรายการของร้านนี้ในตะกร้าแล้ว');
+                showToast('❌ ไม่พบรายการของร้านนี้ในตะกร้าแล้ว', 'error');
                 return;
             }
             const total = shopItems.reduce((sum, item) => sum + (item.price * item.qty), 0);
@@ -139,12 +368,12 @@
                 const remaining = cart.filter(item => item.shopId != targetShopId);
                 localStorage.setItem(CART_KEY, JSON.stringify(remaining));
 
-                alert('✅ ออเดอร์ถูกส่งไปยังร้านค้าแล้ว!');
-                window.location.href = "index.html";
+                showToast('✅ ออเดอร์ถูกส่งไปยังร้านค้าแล้ว!', 'success');
+                setTimeout(() => { window.location.href = "index.html"; }, 900);
             } catch (e) {
-                alert('เกิดข้อผิดพลาด: ' + e.message);
+                showToast('เกิดข้อผิดพลาด: ' + e.message, 'error');
             } finally {
-                if (btn) { btn.disabled = false; btn.textContent = 'ยืนยันออเดอร์'; }
+                if (btn) { btn.disabled = false; btn.textContent = '✅ ยืนยันออเดอร์'; }
             }
         }
 

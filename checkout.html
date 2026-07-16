@@ -4,43 +4,293 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>UniQueue – ตะกร้าและจ่ายเงิน</title>
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
-:root { --cream: #FDF6EC; --terra: #C8522A; --terra-dk: #A8391A; --ink: #2C1810; --white: #FFFFFF; --r: 18px; }
-body { font-family: 'Sarabun', sans-serif; background: var(--cream); color: var(--ink); padding-bottom: 40px; }
-.hero { background: var(--terra); padding: 40px 20px 60px; text-align: center; color: white; }
-.wrap { max-width: 500px; margin: -32px auto 0; padding: 0 16px; position: relative; }
-.shop-section { background: var(--white); border-radius: var(--r); padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-.shop-title { font-weight: 700; color: var(--terra); margin-bottom: 12px; border-bottom: 2px solid var(--terra); padding-bottom: 8px; }
-.item-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 0.9rem; }
-.btn-pay { background: var(--terra); color: white; border: none; border-radius: 10px; padding: 12px; width: 100%; font-weight: 600; cursor: pointer; margin-top: 15px; }
+:root {
+  --cream:    #FDF6EC;
+  --paper:    #FFFFFF;
+  --terra:    #C8522A;
+  --terra-dk: #A8391A;
+  --amber:    #E8912A;
+  --ink:      #2C1810;
+  --muted:    #9C8070;
+  --border:   #E8D5BC;
+  --r: 20px;
+}
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: 'Sarabun', sans-serif;
+  background: var(--cream);
+  color: var(--ink);
+  padding-bottom: 56px;
+  -webkit-font-smoothing: antialiased;
+}
+.mono { font-family: 'Space Mono', monospace; }
+
+/* ---------- Hero ---------- */
+.hero {
+  background: linear-gradient(155deg, var(--terra) 0%, var(--terra-dk) 100%);
+  padding: 36px 20px 68px;
+  text-align: center;
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image: radial-gradient(circle, rgba(255,255,255,0.10) 1.5px, transparent 1.5px);
+  background-size: 22px 22px;
+  opacity: 0.5;
+}
+.hero-inner { position: relative; }
+.hero-eyebrow {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  opacity: 0.75;
+  margin-bottom: 6px;
+}
+.hero h1 { margin: 0; font-size: 1.6rem; font-weight: 700; }
+.hero-sub { margin-top: 6px; font-size: 0.88rem; opacity: 0.88; }
+
+/* ---------- Layout ---------- */
+.wrap { max-width: 520px; margin: -40px auto 0; padding: 0 16px; position: relative; }
+
+.summary-bar {
+  background: var(--paper);
+  border-radius: var(--r);
+  padding: 14px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 8px 24px rgba(44,24,16,0.10);
+  margin-bottom: 18px;
+}
+.summary-bar .label { font-size: 0.78rem; color: var(--muted); font-weight: 600; }
+.summary-bar .value { font-size: 1.35rem; font-weight: 700; color: var(--terra); }
+
+/* ---------- Ticket card ---------- */
+.ticket {
+  background: var(--paper);
+  border-radius: var(--r);
+  padding: 18px 18px 0;
+  margin-bottom: 22px;
+  box-shadow: 0 6px 18px rgba(44,24,16,0.06);
+  position: relative;
+  animation: rise 0.4s ease both;
+}
+.ticket:nth-of-type(2) { animation-delay: 0.05s; }
+.ticket:nth-of-type(3) { animation-delay: 0.10s; }
+.ticket:nth-of-type(4) { animation-delay: 0.15s; }
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.ticket-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 2px dashed var(--border);
+}
+.ticket-icon {
+  width: 34px; height: 34px;
+  border-radius: 10px;
+  background: #FFF1E6;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.05rem;
+  flex-shrink: 0;
+}
+.ticket-title { font-weight: 700; color: var(--ink); font-size: 1rem; line-height: 1.25; }
+.ticket-count { font-size: 0.76rem; color: var(--muted); margin-top: 1px; }
+
+.item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--border);
+  font-size: 0.92rem;
+}
+.item-row:last-of-type { border-bottom: none; }
+.item-name { color: var(--ink); }
+.item-qty { color: var(--muted); font-size: 0.82rem; }
+.item-price { color: var(--ink); white-space: nowrap; font-weight: 600; }
+
+.ticket-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  margin-top: 4px;
+  border-top: 2px solid var(--ink);
+}
+.ticket-total .t-label { font-size: 0.82rem; color: var(--muted); font-weight: 600; }
+.ticket-total .t-value { font-size: 1.15rem; font-weight: 700; color: var(--terra); }
+
+.btn-pay {
+  background: var(--terra);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 13px;
+  width: 100%;
+  font-family: 'Sarabun', sans-serif;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  margin: 14px 0 18px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: background 0.15s, transform 0.1s;
+}
 .btn-pay:hover { background: var(--terra-dk); }
-.btn-clear { background: none; border: 1px solid #E8D5BC; color: #9C8070; padding: 10px; width: 100%; border-radius: 10px; margin-top: 20px; cursor: pointer; }
+.btn-pay:active { transform: scale(0.98); }
+
+/* Ticket perforation: punch holes + torn edge */
+.perf {
+  position: relative;
+  height: 14px;
+  margin: 0 -18px;
+  background:
+    radial-gradient(circle 7px at 0 0, transparent 7px, var(--cream) 7.5px) top left,
+    radial-gradient(circle 7px at 100% 0, transparent 7px, var(--cream) 7.5px) top right;
+  background-repeat: no-repeat;
+}
+.perf::after {
+  content: '';
+  position: absolute; left: 18px; right: 18px; top: 0;
+  border-top: 2px dashed var(--border);
+}
+
+/* ---------- Empty state ---------- */
+.empty-state {
+  text-align: center;
+  padding: 64px 20px;
+  color: var(--muted);
+}
+.empty-emoji { font-size: 2.6rem; margin-bottom: 10px; }
+.empty-title { font-weight: 700; color: var(--ink); font-size: 1.05rem; margin-bottom: 4px; }
+.empty-sub { font-size: 0.88rem; margin-bottom: 20px; }
+.btn-ghost {
+  display: inline-block;
+  background: var(--paper);
+  border: 1.5px solid var(--border);
+  color: var(--ink);
+  padding: 10px 22px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+.btn-ghost:hover { border-color: var(--terra); color: var(--terra); }
+
+/* ---------- Clear cart ---------- */
+.btn-clear {
+  background: none;
+  border: 1.5px dashed var(--border);
+  color: var(--muted);
+  padding: 12px;
+  width: 100%;
+  border-radius: 12px;
+  margin-top: 6px;
+  cursor: pointer;
+  font-family: 'Sarabun', sans-serif;
+  font-size: 0.88rem;
+  transition: border-color 0.15s, color 0.15s;
+}
+.btn-clear:hover { border-color: var(--terra); color: var(--terra-dk); }
+
+/* ---------- Toast notifications ---------- */
+.toast-stack {
+  position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+  z-index: 5000; display: flex; flex-direction: column; gap: 8px;
+  width: min(92vw, 380px); pointer-events: none;
+}
+.toast {
+  background: var(--ink); color: #fff; padding: 13px 16px;
+  border-radius: 12px; font-size: 0.88rem; font-weight: 600;
+  box-shadow: 0 10px 28px rgba(44,24,16,0.28);
+  display: flex; align-items: center; gap: 10px;
+  opacity: 0; transform: translateY(-12px) scale(0.98);
+  transition: opacity .25s ease, transform .25s ease;
+  pointer-events: auto;
+}
+.toast.show { opacity: 1; transform: translateY(0) scale(1); }
+.toast.success { background: #6E8F71; }
+.toast.error { background: var(--terra-dk); }
+
+.summary-bar { animation: rise 0.35s ease both; }
+.empty-state { animation: rise 0.35s ease both; }
 </style>
 </head>
 <body>
 
-<div class="hero"><h1>🛒 ตะกร้าของฉัน</h1></div>
+<div class="hero">
+  <div class="hero-inner">
+    <div class="hero-eyebrow">Order Ticket</div>
+    <h1>🛒 ตะกร้าของฉัน</h1>
+    <div class="hero-sub" id="heroSub">รายการอาหารที่เลือกไว้ แยกตามร้าน</div>
+  </div>
+</div>
 
 <div class="wrap">
-    <div id="cartContainer"></div>
-    <button class="btn-clear" onclick="clearCart()">🗑️ ล้างตะกร้าทั้งหมด</button>
+  <div id="summaryBar"></div>
+  <div id="cartContainer"></div>
+  <button class="btn-clear" id="clearBtn" onclick="clearCart()" style="display:none;">🗑️ ล้างตะกร้าทั้งหมด</button>
 </div>
 
 <script>
 const CART_KEY = 'uniQueueCart';
 
+function showToast(msg, type) {
+    let stack = document.getElementById('toastStack');
+    if (!stack) {
+        stack = document.createElement('div');
+        stack.id = 'toastStack';
+        stack.className = 'toast-stack';
+        document.body.appendChild(stack);
+    }
+    const t = document.createElement('div');
+    t.className = 'toast' + (type ? ' ' + type : '');
+    t.textContent = msg;
+    stack.appendChild(t);
+    requestAnimationFrame(() => t.classList.add('show'));
+    setTimeout(() => {
+        t.classList.remove('show');
+        setTimeout(() => t.remove(), 250);
+    }, 3200);
+}
+
 function renderCart() {
     const cart = JSON.parse(localStorage.getItem(CART_KEY)) || [];
     const container = document.getElementById('cartContainer');
-    
+    const summaryBar = document.getElementById('summaryBar');
+    const clearBtn = document.getElementById('clearBtn');
+    const heroSub = document.getElementById('heroSub');
+
     if (cart.length === 0) {
-        container.innerHTML = '<div style="text-align:center; padding:40px;">ตะกร้ายังว่างเปล่าอยู่ครับ</div>';
+        summaryBar.innerHTML = '';
+        clearBtn.style.display = 'none';
+        heroSub.textContent = 'ยังไม่มีรายการในตะกร้า';
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-emoji">🍜</div>
+            <div class="empty-title">ตะกร้ายังว่างเปล่าอยู่ครับ</div>
+            <div class="empty-sub">เลือกเมนูจากร้านโปรดแล้วกลับมาที่นี่อีกครั้ง</div>
+            <a class="btn-ghost" href="index.html">🏪 ไปเลือกร้านอาหาร</a>
+          </div>`;
         return;
     }
 
     // จัดกลุ่มรายการตาม shopId
     const shopGroups = {};
+    let grandTotal = 0;
     cart.forEach(item => {
         if (!shopGroups[item.shopId]) {
             shopGroups[item.shopId] = { shopName: item.shopName, items: [], total: 0 };
@@ -48,21 +298,45 @@ function renderCart() {
         shopGroups[item.shopId].items.push(item);
         shopGroups[item.shopId].total += (item.price * item.qty);
     });
+    Object.values(shopGroups).forEach(s => grandTotal += s.total);
+
+    const shopCount = Object.keys(shopGroups).length;
+    heroSub.textContent = `${shopCount} ร้าน • รอชำระเงินแยกตามร้าน`;
+    clearBtn.style.display = 'block';
+
+    summaryBar.innerHTML = `
+      <div class="summary-bar">
+        <div>
+          <div class="label">ยอดรวมทั้งตะกร้า</div>
+        </div>
+        <div class="value mono">฿${grandTotal}</div>
+      </div>`;
 
     // สร้าง HTML แยกโซนตามร้าน
     let html = '';
     for (let shopId in shopGroups) {
         const shop = shopGroups[shopId];
+        const itemCount = shop.items.reduce((n, i) => n + i.qty, 0);
         html += `
-        <div class="shop-section">
-            <div class="shop-title">🏪 ${shop.shopName}</div>
+        <div class="ticket">
+            <div class="ticket-head">
+                <div class="ticket-icon">🏪</div>
+                <div>
+                    <div class="ticket-title">${shop.shopName}</div>
+                    <div class="ticket-count">${itemCount} รายการ</div>
+                </div>
+            </div>
             ${shop.items.map(item => `
                 <div class="item-row">
-                    <span>${item.menu} x ${item.qty}</span>
-                    <span>฿${item.price * item.qty}</span>
+                    <span class="item-name">${item.menu} <span class="item-qty">x${item.qty}</span></span>
+                    <span class="item-price mono">฿${item.price * item.qty}</span>
                 </div>
             `).join('')}
-            <div style="margin-top:10px; font-weight:700; text-align:right; color:var(--terra);">ยอดรวม: ฿${shop.total}</div>
+            <div class="ticket-total">
+                <span class="t-label">ยอดรวมร้านนี้</span>
+                <span class="t-value mono">฿${shop.total}</span>
+            </div>
+            <div class="perf"></div>
             <button class="btn-pay" onclick="payForShop('${shopId}')">💳 ชำระเงินร้าน ${shop.shopName}</button>
         </div>`;
     }
@@ -78,6 +352,7 @@ function clearCart() {
     if (confirm('ต้องการล้างตะกร้าทั้งหมดใช่หรือไม่?')) {
         localStorage.removeItem(CART_KEY);
         renderCart();
+        showToast('🗑️ ล้างตะกร้าเรียบร้อยแล้ว', 'success');
     }
 }
 
