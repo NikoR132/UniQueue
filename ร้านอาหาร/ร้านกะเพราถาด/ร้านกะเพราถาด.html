@@ -170,7 +170,7 @@ body {
 
 <div class="wrap">
   <div class="back-btn-container">
-    <a href="home.html" class="back-btn">⬅️ กลับไปหน้ารวมร้านค้า</a>
+    <a href="../../index.html" class="back-btn">⬅️ กลับไปหน้ารวมร้านค้า</a>
   </div>
 
   <input type="hidden" id="custName">
@@ -307,17 +307,17 @@ import { getFirestore, collection, onSnapshot }
   from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const app = initializeApp({
-  apiKey: "AIzaSyAGg-Xsst8kkL0DyZ6Ay4o3dnmBg6pVps0",
-  authDomain: "uniqueue-1e6a9.firebaseapp.com",
-  projectId: "uniqueue-1e6a9",
-  storageBucket: "uniqueue-1e6a9.firebasestorage.app",
-  messagingSenderId: "704755349414",
-  appId: "1:704755349414:web:119ff42eef7ff0bcc98167"
+  apiKey: "AIzaSyCJqzmcjSLBT6W4agU8QzU_IP9NdWJLEJk",
+  authDomain: "dwdwdw-2d303.firebaseapp.com",
+  projectId: "dwdwdw-2d303",
+  storageBucket: "dwdwdw-2d303.firebasestorage.app",
+  messagingSenderId: "989547762601",
+  appId: "1:989547762601:web:160638d280f1b01c8e2ab8"
 });
 const db = getFirestore(app);
 
-const COLLECTION_NAME = "orders_shop4"; // กะเพราถาด (อิงจากโค้ดเดิม)
-const SHOP_ID = "shop_kaprao"; 
+const COLLECTION_NAME = "orders_shop6"; // กะเพราถาด (อิงจากโค้ดเดิม)
+const SHOP_ID = "shop6"; 
 const CART_KEY = "uniQueueCart";
 
 let globalCart = [];
@@ -370,7 +370,7 @@ function decreaseQty(index) { if (globalCart[index]) { if (globalCart[index].qty
 function clearCart() { if (confirm('คุณต้องการล้างตะกร้าทั้งหมดใช่หรือไม่?')) { localStorage.removeItem(CART_KEY); globalCart = []; updateCartBar(); renderCartItems(); } }
 function openCart() { renderCartItems(); document.getElementById('cartModal').classList.add('open'); }
 function closeCart() { document.getElementById('cartModal').classList.remove('open'); }
-function goToCheckout() { loadGlobalCart(); if (globalCart.length === 0) { alert('ตะกร้ายังไม่มีอาหาร'); return; } closeCart(); window.location.href = 'checkout.html'; }
+function goToCheckout() { loadGlobalCart(); if (globalCart.length === 0) { alert('ตะกร้ายังไม่มีอาหาร'); return; } closeCart(); window.location.href = '../../checkout.html'; }
 
 window.increaseQty = increaseQty; window.decreaseQty = decreaseQty; window.clearCart = clearCart; window.openCart = openCart; window.closeCart = closeCart; window.goToCheckout = goToCheckout;
 

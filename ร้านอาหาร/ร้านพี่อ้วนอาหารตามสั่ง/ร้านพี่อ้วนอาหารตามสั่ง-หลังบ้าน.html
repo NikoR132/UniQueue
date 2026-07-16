@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>UniQueue Manager – แผงควบคุมตะกร้าร้านค้า</title>
+<title>UniQueue Manager – ร้านพี่อ้วนอาหารตามสั่ง (หลังบ้าน)</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root { --cream: #FDF6EC; --terra: #C8522A; --terra-dk: #A8391A; --amber: #E8912A; --sage: #7A9E7E; --ink: #2C1810; --muted: #9C8070; --border: #E8D5BC; --white: #FFFFFF; --r: 18px; }
@@ -32,7 +32,7 @@ body { font-family: 'Sarabun', sans-serif; background: var(--cream); color: var(
 </head>
 <body>
 
-<div class="header"><h2>🧑‍🍳 แผงจัดการออเดอร์ (ร้านเมล่อน)</h2></div>
+<div class="header"><h2>🧑‍🍳 แผงจัดการออเดอร์ (ร้านพี่อ้วนอาหารตามสั่ง)</h2></div>
 
 <div class="stats-bar">
   <div class="stat-card"><div class="stat-label">⏳ รอทำ</div><div class="stat-val" id="countWaiting">0</div></div>
@@ -60,7 +60,7 @@ const app = initializeApp({
 });
 const db = getFirestore(app);
 const BOT = "8323462769:AAEmNAEfekbPLnyG249X-W519mb20onsFnA";
-const COLLECTION_NAME = "orders_shop1";
+const COLLECTION_NAME = "orders_shop5";
 
 window.updateBasketStatus = async (id, currentStatus, tgId, itemsJson, customer) => {
   const nextStatus = currentStatus === 'waiting' ? 'cooking' : 'completed';

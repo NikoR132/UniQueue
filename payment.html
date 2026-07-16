@@ -6,23 +6,25 @@
     <title>ชำระเงิน – UniQueue</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
-        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // --- ใส่ CONFIG ของคุณที่นี่ ---
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID"
+            apiKey: "AIzaSyCJqzmcjSLBT6W4agU8QzU_IP9NdWJLEJk",
+            authDomain: "dwdwdw-2d303.firebaseapp.com",
+            projectId: "dwdwdw-2d303",
+            storageBucket: "dwdwdw-2d303.firebasestorage.app",
+            messagingSenderId: "989547762601",
+            appId: "1:989547762601:web:160638d280f1b01c8e2ab8",
+            measurementId: "G-EZW78H155D"
         };
-        // --------------------------
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         window.db = db; // ทำให้เรียกใช้ในฟังก์ชันได้
+        window.addDoc = addDoc;
+        window.collection = collection;
+        window.serverTimestamp = serverTimestamp;
     </script>
     <style>
         body { font-family: 'Sarabun', sans-serif; background: #FDF6EC; padding: 20px; color: #2C1810; }
@@ -31,6 +33,10 @@
         .order-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
         .total-price { font-size: 1.5rem; font-weight: 700; color: #C8522A; text-align: center; margin: 20px 0; }
         .method-box { background: #f9f9f9; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
+        .pay-option { display: flex; align-items: center; gap: 10px; padding: 12px; margin-top: 10px; background: white; border: 2px solid #E8D5BC; border-radius: 10px; cursor: pointer; transition: border-color 0.2s; }
+        .pay-option:has(input:checked) { border-color: #C8522A; background: #FFF6EE; }
+        .pay-option input { width: 18px; height: 18px; accent-color: #C8522A; }
+        .pay-option span { font-weight: 500; }
         .btn { display: block; width: 100%; background: #C8522A; color: white; padding: 15px; border-radius: 10px; text-align: center; text-decoration: none; font-weight: 600; border: none; cursor: pointer; margin-top: 10px; }
         #qrCodeArea { display: none; text-align: center; margin-top: 15px; }
         img.qr { width: 200px; border: 2px solid #E8D5BC; border-radius: 10px; }
@@ -43,14 +49,20 @@
         <div class="total-price" id="totalDisplay">฿0</div>
 
         <div class="method-box">
-            <label><strong>เลือกวิธีการชำระเงิน:</strong></label><br>
-            <input type="radio" name="payMethod" value="transfer" onclick="togglePay(true)" checked> โอนเงิน (แสดง QR)<br>
-            <input type="radio" name="payMethod" value="cash" onclick="togglePay(false)"> จ่ายเงินสดที่ร้าน
+            <label><strong>เลือกวิธีการชำระเงิน:</strong></label>
+            <label class="pay-option">
+                <input type="radio" name="payMethod" value="promptpay" onclick="togglePay(true)" checked>
+                <span>📱 คิวอาร์พร้อมเพย์ (PromptPay)</span>
+            </label>
+            <label class="pay-option">
+                <input type="radio" name="payMethod" value="cash" onclick="togglePay(false)">
+                <span>💵 จ่ายเงินสดที่ร้าน (Cash)</span>
+            </label>
         </div>
 
         <div id="qrCodeArea">
-            <p>แสกนเพื่อโอนเงิน:</p>
-            <img src="https://via.placeholder.com/200?text=QR+Code+ร้านค้า" class="qr" alt="QR Code">
+            <p>แสกนคิวอาร์พร้อมเพย์เพื่อโอนเงิน:</p>
+            <img src="https://via.placeholder.com/200?text=PromptPay+QR" class="qr" alt="PromptPay QR Code">
         </div>
 
         <button class="btn" onclick="confirmOrder()">ยืนยันออเดอร์</button>
@@ -84,31 +96,55 @@
         }
 
         async function confirmOrder() {
+            // 👤 ดึงข้อมูลผู้ใช้ที่ล็อกอินอยู่จาก localStorage
+            const currentUser = JSON.parse(localStorage.getItem('uniQueueUser')) || null;
+            if (!currentUser || !currentUser.telegramChatId) {
+                alert('❌ ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบใหม่อีกครั้งที่หน้าแรก');
+                window.location.href = "index.html";
+                return;
+            }
+
             const cart = JSON.parse(localStorage.getItem(CART_KEY)) || [];
             const shopItems = cart.filter(item => item.shopId == targetShopId);
+            if (shopItems.length === 0) {
+                alert('❌ ไม่พบรายการของร้านนี้ในตะกร้าแล้ว');
+                return;
+            }
             const total = shopItems.reduce((sum, item) => sum + (item.price * item.qty), 0);
 
+            // 🏪 ออเดอร์ของแต่ละร้านจะถูกเก็บแยกคอลเล็กชันตาม shopId เช่น orders_shop1, orders_shop2
+            // เพื่อให้ตรงกับที่หน้าหลังบ้านของแต่ละร้าน (เช่น ...หลังบ้าน.html) อ่านข้อมูลอยู่
+            const collectionName = `orders_${targetShopId}`;
+
             const orderData = {
+                customer: currentUser.displayName,
+                telegramId: currentUser.telegramChatId,
                 shopId: targetShopId,
+                shopName: shopItems[0].shopName,
                 items: shopItems,
                 price: total,
+                paymentMethod: document.querySelector('input[name="payMethod"]:checked').value, // 'promptpay' หรือ 'cash'
                 status: "waiting",
-                paymentMethod: document.querySelector('input[name="payMethod"]:checked').value,
-                timestamp: new Date()
+                timestamp: window.serverTimestamp()
             };
 
+            const btn = document.querySelector('.btn');
+            if (btn) { btn.disabled = true; btn.textContent = '⏳ กำลังส่งออเดอร์...'; }
+
             try {
-                // บันทึกลง Firestore ใน Collection 'orders'
-                await addDoc(collection(window.db, "orders"), orderData);
-                
+                // บันทึกลง Firestore ใน Collection ของร้านนั้นๆ โดยเฉพาะ
+                await window.addDoc(window.collection(window.db, collectionName), orderData);
+
                 // ลบเฉพาะของร้านนี้ออกจากตะกร้า
                 const remaining = cart.filter(item => item.shopId != targetShopId);
                 localStorage.setItem(CART_KEY, JSON.stringify(remaining));
-                
-                alert('ออเดอร์ถูกส่งไปยังร้านค้าแล้ว!');
+
+                alert('✅ ออเดอร์ถูกส่งไปยังร้านค้าแล้ว!');
                 window.location.href = "index.html";
             } catch (e) {
                 alert('เกิดข้อผิดพลาด: ' + e.message);
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = 'ยืนยันออเดอร์'; }
             }
         }
 
