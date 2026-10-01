@@ -69,7 +69,6 @@ const app = initializeApp({
   measurementId: "G-EZW78H155D"
 });
 const db = getFirestore(app);
-const BOT = "8323462769:AAEmNAEfekbPLnyG249X-W519mb20onsFnA";
 const COLLECTION_NAME = "orders_shop2";
 
 window.updateBasketStatus = async (id, currentStatus, tgId, itemsJson, customer) => {
@@ -78,13 +77,17 @@ window.updateBasketStatus = async (id, currentStatus, tgId, itemsJson, customer)
   try {
     await updateDoc(doc(db, COLLECTION_NAME, id), { status: nextStatus });
     
-    let itemsTxt = items.map(i => `- ${i.menu} (${i.qty} ชิ้น)`).join('\n');
-    let msg = nextStatus === 'cooking' 
-      ? `🍳 ร้านเริ่มทำอาหารในตะกร้าคุณแล้ว!\n${itemsTxt}` 
-      : `🔔 ตะกร้าอาหารเสร็จแล้ว! คุณ ${customer || 'ลูกค้า'} มารับได้เลยครับ!\n${itemsTxt} 🎉`;
-    
-    if (tgId && tgId !== 'undefined' && tgId !== 'null' && tgId !== '') {
-      await fetch(`https://api.telegram.org/bot${BOT}/sendMessage?chat_id=${tgId}&text=${encodeURIComponent(msg)}`);
+    // แจ้งเตือน Telegram ผ่านเซิร์ฟเวอร์ (/api/notify) — token เก็บฝั่งเซิร์ฟเวอร์ ไม่อยู่ในหน้าเว็บ
+    try {
+      const res = await fetch('/api/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shopId: COLLECTION_NAME.replace('orders_', ''), orderId: id })
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+    } catch (notifyErr) {
+      console.warn('notify failed:', notifyErr);
+      alert('อัปเดตสถานะแล้ว แต่ส่งแจ้งเตือน Telegram ให้ลูกค้าไม่สำเร็จ');
     }
   } catch (e) { alert("เกิดข้อผิดพลาด: " + e.message); }
 };

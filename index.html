@@ -90,6 +90,9 @@ body {
   width: 100%; padding: 12px 14px;
   border: 1.5px solid var(--border);
   border-radius: 10px; font-family: 'Sarabun', sans-serif; font-size: 0.95rem;
+  background: #fff;
+  color: #333;
+  -webkit-text-fill-color: #333;
   transition: border-color 0.15s;
 }
 .form-group input:focus { outline: none; border-color: var(--terra); }
@@ -169,6 +172,79 @@ body {
 }
 .btn-get-id:hover { background: #1a80b1; }
 .btn-get-id:active { transform: scale(0.98); }
+
+
+/* 🤖 UniQueue Telegram Bot */
+.bot-intro {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0 12px;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #d8e8f2;
+  border-radius: 12px;
+}
+.bot-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ef6690, #f28aa8);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+.bot-intro b {
+  display: block;
+  color: #263238;
+  font-size: 0.95rem;
+}
+.bot-intro span {
+  display: block;
+  color: #777;
+  font-size: 0.78rem;
+  margin-top: 2px;
+}
+.btn-open-bot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  box-sizing: border-box;
+  background: #229ED9;
+  color: #fff !important;
+  text-decoration: none;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin: 0 0 12px;
+  transition: background 0.2s, transform 0.1s;
+  text-align: center;
+  box-shadow: 0 3px 6px rgba(34,158,217,0.25);
+}
+.btn-open-bot:hover { background: #1a80b1; }
+.btn-open-bot:active { transform: scale(0.98); }
+.bot-username {
+  color: #1A6899;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.78rem;
+}
+.bot-note {
+  margin-top: 10px;
+  padding: 10px 11px;
+  background: #FFF9E8;
+  border: 1px solid #F0D58A;
+  border-radius: 10px;
+  color: #69551D;
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
 
 .btn-submit {
   width: 100%; background: var(--terra); color: white; border: none;
@@ -459,25 +535,48 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     </div>
 
     <div class="guide-box">
-      <div class="guide-title">💡 วิธีดู Telegram Chat ID ของตัวเอง</div>
+      <div class="guide-title">🤖 เชื่อมต่อ Telegram กับ UniQueue</div>
+
+      <div class="bot-intro">
+        <div class="bot-icon">UN</div>
+        <div>
+          <b>UniQueue App</b>
+          <span>บอทสำหรับแจ้งเตือนคิวและสถานะอาหาร</span>
+          <span class="bot-username">@uniqueue_001_bot</span>
+        </div>
+      </div>
+
+      <a
+        href="https://t.me/uniqueue_001_bot"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="btn-open-bot"
+      >
+        ✈️ เปิด UniQueue App ใน Telegram
+      </a>
+
       <ul class="guide-steps">
         <li>
-          <div class="step-header"><span class="step-num">1</span> <b>กดเปิดแอป Telegram</b></div>
-          <span>กดปุ่มสีฟ้า <b>"กดรับ ID ที่นี่"</b> ด้านล่างนี้เพื่อไปยังแอปพลิเคชัน</span>
+          <div class="step-header"><span class="step-num">1</span> <b>เพิ่ม UniQueue App</b></div>
+          <span>กดปุ่มด้านบนเพื่อเปิดแชท <b>@uniqueue_001_bot</b> ใน Telegram แล้วกด <b>Start</b> (เริ่มต้น)</span>
         </li>
         <li>
-          <div class="step-header"><span class="step-num">2</span> <b>กดปุ่มเริ่มใช้งาน</b></div>
-          <span>เมื่อเข้าแชทบอทแล้ว ให้กดปุ่ม <b>Start</b> (หรือ เริ่มต้น) บริเวณด้านล่าง</span>
+          <div class="step-header"><span class="step-num">2</span> <b>รับ Telegram Chat ID</b></div>
+          <span>หลังจากเพิ่มบอทแล้ว ให้กดปุ่มด้านล่างเพื่อเปิด <b>@userinfobot</b> และกด <b>Start</b> เพื่อดู ID ของคุณ</span>
         </li>
         <li>
           <div class="step-header"><span class="step-num">3</span> <b>คัดลอกตัวเลข Id</b></div>
-          <span>คัดลอกตัวเลขที่อยู่หลังคำว่า <span class="highlight-id">Id:</span> นำมากรอกใส่ช่องด้านบน</span>
+          <span>คัดลอกตัวเลขที่อยู่หลังคำว่า <span class="highlight-id">Id:</span> แล้วนำมากรอกในช่อง Telegram Chat ID ด้านบน</span>
         </li>
       </ul>
-      
-      <a href="https://t.me/userinfobot" target="_blank" class="btn-get-id">
-        🔹 กดรับ ID ที่นี่ (เปิดเข้า Telegram)
+
+      <a href="https://t.me/userinfobot" target="_blank" rel="noopener noreferrer" class="btn-get-id">
+        🔹 รับ Telegram Chat ID ของฉัน
       </a>
+
+      <div class="bot-note">
+        💡 <b>หมายเหตุ:</b> ใช้ UniQueue App ตัวเดียวร่วมกันได้ทุกคน โดยแต่ละคนจะมี Telegram Chat ID ของตัวเอง ระบบจะใช้ ID นี้ส่งแจ้งเตือนคิวอาหารให้ถูกคน
+      </div>
     </div>
     
     <button class="btn-submit" onclick="submitLogin()">เข้าสู่ระบบเพื่อเลือกหน้าร้าน</button>
@@ -1015,8 +1114,6 @@ const q = query(collection(db, "shops"), orderBy("order", "asc"));
 onSnapshot(q, (snap) => {
   const shops = [];
   snap.forEach(d => shops.push({ id: d.id, ...d.data() }));
-  // ร้านที่เปิดอยู่ขึ้นก่อน ร้านที่ปิดชั่วคราวไว้ท้ายสุด (คงลำดับ "order" เดิมในแต่ละกลุ่ม)
-  shops.sort((a, b) => (a.status === 'suspended') - (b.status === 'suspended'));
   renderShopList(shops);
 }, (err) => {
   console.error("Firestore listen error:", err);
