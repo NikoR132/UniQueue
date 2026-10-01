@@ -82,12 +82,6 @@ body {
   margin: auto;
   position: relative;
 }
-.modal-box::before {
-  content: '';
-  position: absolute; top: 0; left: 22px; right: 22px; height: 4px;
-  background: repeating-linear-gradient(90deg, var(--terra) 0 10px, transparent 10px 18px);
-  border-radius: 0 0 4px 4px;
-}
 .modal-box h2 { font-size: 1.4rem; margin-bottom: 8px; color: var(--terra); text-align: center; }
 .modal-box p { font-size: 0.85rem; color: var(--muted); margin-bottom: 15px; text-align: center; }
 .form-group { margin-bottom: 14px; }
@@ -1021,6 +1015,8 @@ const q = query(collection(db, "shops"), orderBy("order", "asc"));
 onSnapshot(q, (snap) => {
   const shops = [];
   snap.forEach(d => shops.push({ id: d.id, ...d.data() }));
+  // ร้านที่เปิดอยู่ขึ้นก่อน ร้านที่ปิดชั่วคราวไว้ท้ายสุด (คงลำดับ "order" เดิมในแต่ละกลุ่ม)
+  shops.sort((a, b) => (a.status === 'suspended') - (b.status === 'suspended'));
   renderShopList(shops);
 }, (err) => {
   console.error("Firestore listen error:", err);

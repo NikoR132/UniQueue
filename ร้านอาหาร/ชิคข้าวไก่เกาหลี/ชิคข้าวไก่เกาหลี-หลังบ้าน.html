@@ -28,6 +28,16 @@ body { font-family: 'Sarabun', sans-serif; background: var(--cream); color: var(
 .btn-start { background: var(--amber); }
 .btn-done { background: var(--sage); }
 .empty-msg { text-align: center; color: var(--muted); margin-top: 40px; font-size: 0.9rem; }
+.pay-box { border-radius: 10px; padding: 8px 10px; margin: 8px 0; font-size: 0.85rem; border: 1px solid var(--border); background: #F3F8F3; }
+.pay-box.pay-cash { background: #FFF6E5; }
+.pay-row { display: flex; justify-content: space-between; align-items: center; font-weight: 700; }
+.pay-row b { color: var(--terra); font-size: 1.05rem; }
+.pay-hint { color: var(--muted); font-size: 0.75rem; margin-top: 4px; }
+.pay-warn { color: var(--terra-dk); font-weight: 700; margin-top: 4px; }
+.slip-thumb { display: block; width: 100%; max-height: 150px; object-fit: cover; object-position: top; border-radius: 8px; margin-top: 8px; border: 1px solid var(--border); cursor: zoom-in; }
+#slipLightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.82); display: none; align-items: center; justify-content: center; z-index: 9999; padding: 16px; cursor: zoom-out; }
+#slipLightbox.open { display: flex; }
+#slipLightbox img { max-width: 100%; max-height: 100%; border-radius: 10px; background: #fff; }
 </style>
 </head>
 <body>
@@ -79,6 +89,32 @@ window.updateBasketStatus = async (id, currentStatus, tgId, itemsJson, customer)
   } catch (e) { alert("เกิดข้อผิดพลาด: " + e.message); }
 };
 
+
+const SLIP_RE = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/;
+const slips = {};
+function paymentBlock(id, data) {
+  const amt = (Number(data.price) || 0).toFixed(2);
+  if (data.paymentMethod === 'promptpay') {
+    const ok = typeof data.slipImage === 'string' && SLIP_RE.test(data.slipImage);
+    if (ok) slips[id] = data.slipImage;
+    return `<div class="pay-box"><div class="pay-row"><span>💳 โอนพร้อมเพย์</span><b>฿${amt}</b></div>`
+      + (ok ? `<img class="slip-thumb" src="${data.slipImage}" data-slip="${id}" alt="สลีป"><div class="pay-hint">แตะรูปเพื่อขยาย • ตรวจว่ายอดในสลีปตรง ฿${amt} ก่อนเริ่มทำ</div>`
+            : `<div class="pay-warn">⚠️ ไม่พบสลีปแนบมากับออเดอร์นี้</div>`)
+      + `</div>`;
+  }
+  if (data.paymentMethod === 'cash') {
+    return `<div class="pay-box pay-cash"><div class="pay-row"><span>💵 เงินสดที่ร้าน</span><b>฿${amt}</b></div><div class="pay-hint">เก็บเงินตอนลูกค้ามารับอาหาร</div></div>`;
+  }
+  return '';
+}
+document.addEventListener('click', (e) => {
+  const lb = document.getElementById('slipLightbox');
+  const t = e.target.closest ? e.target.closest('.slip-thumb') : null;
+  if (t && slips[t.dataset.slip]) { lb.querySelector('img').src = slips[t.dataset.slip]; lb.classList.add('open'); return; }
+  if (lb.contains(e.target)) lb.classList.remove('open');
+});
+
+
 // ใช้ query เพื่อเรียงลำดับออเดอร์ใหม่ล่าสุดขึ้นก่อน
 const q = query(collection(db, COLLECTION_NAME), orderBy("timestamp", "desc"));
 
@@ -94,10 +130,10 @@ onSnapshot(q, snap => {
 
     if (data.status === 'waiting') {
       nWait++;
-      waitingHtml += `<div class="order-card"><span class="order-id">#${id.substring(0,5)}</span><div class="order-cust">👤 <b>${customer}</b></div><div class="basket-box">${itemsList.map(i => `<div class="basket-item"><span>🔸 ${i.menu}</span><span class="basket-qty">x ${i.qty}</span></div>`).join('')}</div><button class="btn-action btn-start" onclick="updateBasketStatus('${id}', 'waiting', '${data.telegramId}', '${itemsJsonStr}', '${customer}')">🍳 เริ่มทำทั้งตะกร้า</button></div>`;
+      waitingHtml += `<div class="order-card"><span class="order-id">#${id.substring(0,5)}</span><div class="order-cust">👤 <b>${customer}</b></div>${paymentBlock(id, data)}<div class="basket-box">${itemsList.map(i => `<div class="basket-item"><span>🔸 ${i.menu}</span><span class="basket-qty">x ${i.qty}</span></div>`).join('')}</div><button class="btn-action btn-start" onclick="updateBasketStatus('${id}', 'waiting', '${data.telegramId}', '${itemsJsonStr}', '${customer}')">🍳 เริ่มทำทั้งตะกร้า</button></div>`;
     } else if (data.status === 'cooking') {
       nCook++;
-      cookingHtml += `<div class="order-card"><span class="order-id">#${id.substring(0,5)}</span><div class="order-cust">👤 <b>${customer}</b></div><div class="basket-box">${itemsList.map(i => `<div class="basket-item"><span>🔸 ${i.menu}</span><span class="basket-qty">x ${i.qty}</span></div>`).join('')}</div><button class="btn-action btn-done" onclick="updateBasketStatus('${id}', 'cooking', '${data.telegramId}', '${itemsJsonStr}', '${customer}')">✅ เสร็จทั้งตะกร้า - เรียกรับ</button></div>`;
+      cookingHtml += `<div class="order-card"><span class="order-id">#${id.substring(0,5)}</span><div class="order-cust">👤 <b>${customer}</b></div>${paymentBlock(id, data)}<div class="basket-box">${itemsList.map(i => `<div class="basket-item"><span>🔸 ${i.menu}</span><span class="basket-qty">x ${i.qty}</span></div>`).join('')}</div><button class="btn-action btn-done" onclick="updateBasketStatus('${id}', 'cooking', '${data.telegramId}', '${itemsJsonStr}', '${customer}')">✅ เสร็จทั้งตะกร้า - เรียกรับ</button></div>`;
     } else if (data.status === 'completed') { nComp++; }
   });
   document.getElementById('countWaiting').textContent = nWait;
@@ -107,5 +143,6 @@ onSnapshot(q, snap => {
   document.getElementById('listCooking').innerHTML = cookingHtml || '<div class="empty-msg">🍳 ว่างเปล่า</div>';
 });
 </script>
+<div id="slipLightbox"><img alt="สลีป"></div>
 </body>
 </html>

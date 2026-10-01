@@ -6,6 +6,7 @@
     <title>ชำระเงิน – UniQueue</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -218,6 +219,31 @@
     /* ---------- QR reveal ---------- */
     #qrCodeArea { transition: opacity 0.2s ease, transform 0.2s ease; }
     #qrCodeArea.hiding { opacity: 0; transform: translateY(-6px); }
+    
+    /* ---------- PromptPay amount + slip ---------- */
+    .amount-box {
+      background: #FFF4E8; border: 1.5px solid var(--border);
+      border-radius: 14px; padding: 12px 14px; margin-bottom: 14px;
+    }
+    .amount-label { font-size: 0.78rem; color: var(--muted); font-weight: 600; }
+    .amount-value { font-size: 2rem; font-weight: 700; color: var(--terra); line-height: 1.2; }
+    .amount-note { font-size: 0.8rem; color: var(--terra-dk); font-weight: 600; margin-top: 4px; }
+    #qrBox { display: inline-block; padding: 10px; background: #fff; border: 2px solid var(--border); border-radius: 12px; min-width: 60px; }
+    #qrBox img { display: block; }
+    .qr-missing { padding: 18px 8px; font-size: 0.86rem; color: var(--terra-dk); font-weight: 600; line-height: 1.5; }
+    .slip-box { margin-top: 16px; padding-top: 14px; border-top: 1.5px dashed var(--border); text-align: center; }
+    .slip-box.need { animation: shake 0.35s; }
+    .slip-box.need .slip-pick { border-color: var(--terra); color: var(--terra-dk); }
+    @keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+    .slip-title { font-size: 0.9rem; font-weight: 700; margin-bottom: 8px; }
+    .slip-title .req { color: var(--terra); font-size: 0.78rem; }
+    .slip-pick {
+      display: block; padding: 12px; border: 1.5px dashed var(--border); border-radius: 12px;
+      color: var(--muted); font-weight: 600; font-size: 0.88rem; cursor: pointer; background: var(--paper);
+    }
+    .slip-pick:hover { border-color: var(--terra); color: var(--terra-dk); }
+    .slip-preview { display: block; max-width: 100%; max-height: 260px; margin: 10px auto 0; border-radius: 10px; border: 2px solid var(--border); }
+    .slip-hint { font-size: 0.78rem; color: var(--muted); margin-top: 8px; }
     </style>
 </head>
 <body>
@@ -258,8 +284,20 @@
         </div>
 
         <div id="qrCodeArea">
-            <p>แสกนคิวอาร์พร้อมเพย์เพื่อโอนเงิน</p>
-            <img src="https://via.placeholder.com/200?text=PromptPay+QR" class="qr" alt="PromptPay QR Code">
+            <div class="amount-box">
+                <div class="amount-label">ยอดที่ต้องโอน</div>
+                <div class="amount-value mono" id="payAmount">฿0.00</div>
+                <div class="amount-note">⚠️ โอนให้ตรงตามยอดนี้เท่านั้น ห้ามโอนขาดหรือเกิน</div>
+            </div>
+            <p>สแกนคิวอาร์พร้อมเพย์เพื่อโอนเงิน</p>
+            <div id="qrBox"></div>
+            <div class="slip-box" id="slipBox">
+                <div class="slip-title">📎 แนบสลีปการโอนเงิน <span class="req">*จำเป็น</span></div>
+                <input type="file" id="slipInput" accept="image/*" hidden>
+                <label for="slipInput" class="slip-pick" id="slipPick">เลือกรูปสลีปจากเครื่อง</label>
+                <img id="slipPreview" class="slip-preview" alt="ตัวอย่างสลีป" style="display:none">
+                <div class="slip-hint" id="slipHint">ร้านจะตรวจยอดจากสลีปก่อนเริ่มทำอาหาร</div>
+            </div>
         </div>
     </div>
 
@@ -294,6 +332,105 @@
         const params = new URLSearchParams(window.location.search);
         const targetShopId = params.get('shopId');
 
+        // ===== ตั้งค่าบัญชีพร้อมเพย์ของแต่ละร้าน =====
+        // ใส่เบอร์โทร 10 หลัก หรือเลขบัตรประชาชน 13 หลักของร้าน เช่น { shop1: '0812345678' }
+        // QR ที่สร้างจะฝังยอดเงินไว้ให้ ทำให้แอปธนาคารล็อกยอดตามออเดอร์
+        const PROMPTPAY_IDS = {
+            // shop1: '0812345678',
+        };
+        const DEFAULT_PROMPTPAY_ID = '';
+
+        let slipData = null;      // รูปสลีปที่ย่อแล้ว (data URL)
+        let qrReady = false;
+
+        function tlv(id, val) { return id + String(val.length).padStart(2, '0') + val; }
+        function crc16(str) {
+            let crc = 0xFFFF;
+            for (let i = 0; i < str.length; i++) {
+                crc ^= str.charCodeAt(i) << 8;
+                for (let b = 0; b < 8; b++) {
+                    crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) : (crc << 1);
+                    crc &= 0xFFFF;
+                }
+            }
+            return crc.toString(16).toUpperCase().padStart(4, '0');
+        }
+        function buildPromptPayPayload(rawId, amount) {
+            const id = String(rawId).replace(/\D/g, '');
+            let tag, target;
+            if (id.length >= 15) { tag = '03'; target = id; }
+            else if (id.length >= 13) { tag = '02'; target = id; }
+            else { tag = '01'; target = ('0066' + id.replace(/^0/, '')).padStart(13, '0'); }
+            const merchant = tlv('00', 'A000000677010111') + tlv(tag, target);
+            let p = tlv('00', '01') + tlv('01', amount ? '12' : '11') + tlv('29', merchant)
+                  + tlv('58', 'TH') + tlv('53', '764') + (amount ? tlv('54', Number(amount).toFixed(2)) : '');
+            p += '6304';
+            return p + crc16(p);
+        }
+
+        function renderQr(total) {
+            const box = document.getElementById('qrBox');
+            box.innerHTML = '';
+            qrReady = false;
+            const ppId = PROMPTPAY_IDS[targetShopId] || DEFAULT_PROMPTPAY_ID;
+            if (!ppId) {
+                box.innerHTML = '<div class="qr-missing">ร้านนี้ยังไม่ได้ตั้งค่าบัญชีพร้อมเพย์<br>กรุณาเลือกจ่ายเงินสดที่ร้านแทน</div>';
+                return;
+            }
+            if (typeof QRCode === 'undefined') {
+                box.innerHTML = '<div class="qr-missing">โหลดตัวสร้าง QR ไม่สำเร็จ กรุณารีเฟรชหน้านี้</div>';
+                return;
+            }
+            new QRCode(box, { text: buildPromptPayPayload(ppId, total), width: 200, height: 200, correctLevel: QRCode.CorrectLevel.M });
+            qrReady = true;
+        }
+
+        // ย่อรูปสลีปก่อนเก็บลง Firestore (เอกสารหนึ่งใบจุได้ไม่เกิน ~1MB)
+        function compressSlip(file) {
+            return new Promise((resolve, reject) => {
+                const url = URL.createObjectURL(file);
+                const img = new Image();
+                img.onload = () => {
+                    const MAX = 1280;
+                    const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+                    const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+                    const c = document.createElement('canvas');
+                    c.width = w; c.height = h;
+                    const ctx = c.getContext('2d');
+                    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);
+                    ctx.drawImage(img, 0, 0, w, h);
+                    URL.revokeObjectURL(url);
+                    let q = 0.72, out = c.toDataURL('image/jpeg', q);
+                    while (out.length > 700000 && q > 0.35) { q -= 0.1; out = c.toDataURL('image/jpeg', q); }
+                    out.length > 700000 ? reject(new Error('รูปใหญ่เกินไป')) : resolve(out);
+                };
+                img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('อ่านรูปไม่ได้')); };
+                img.src = url;
+            });
+        }
+
+        document.getElementById('slipInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            const preview = document.getElementById('slipPreview');
+            const pick = document.getElementById('slipPick');
+            slipData = null;
+            preview.style.display = 'none';
+            if (!file) { pick.textContent = 'เลือกรูปสลีปจากเครื่อง'; return; }
+            if (!file.type.startsWith('image/')) {
+                showToast('❌ กรุณาเลือกไฟล์รูปภาพเท่านั้น', 'error');
+                e.target.value = ''; return;
+            }
+            try {
+                slipData = await compressSlip(file);
+                preview.src = slipData;
+                preview.style.display = 'block';
+                pick.textContent = '🔄 เปลี่ยนรูปสลีป';
+            } catch (err) {
+                showToast('❌ แนบสลีปไม่สำเร็จ: ' + err.message, 'error');
+                e.target.value = '';
+            }
+        });
+
         function loadPaymentInfo() {
             const cart = JSON.parse(localStorage.getItem(CART_KEY)) || [];
             const shopItems = cart.filter(item => item.shopId == targetShopId);
@@ -310,6 +447,8 @@
             document.getElementById('paymentDetails').innerHTML = html;
             document.getElementById('perfSpacer').style.display = 'block';
             document.getElementById('totalDisplay').textContent = "฿" + total;
+            document.getElementById('payAmount').textContent = "฿" + total.toFixed(2);
+            renderQr(total);
         }
 
         function togglePay(showQr) {
@@ -340,6 +479,22 @@
                 return;
             }
             const total = shopItems.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            const method = document.querySelector('input[name="payMethod"]:checked').value;
+
+            // 💳 จ่ายด้วย QR: ต้องมี QR ที่ใช้ได้ และต้องแนบสลีปก่อนส่งออเดอร์
+            if (method === 'promptpay') {
+                if (!qrReady) {
+                    showToast('❌ ร้านนี้ยังรับโอนไม่ได้ กรุณาเลือกจ่ายเงินสดที่ร้าน', 'error');
+                    return;
+                }
+                if (!slipData) {
+                    const box = document.getElementById('slipBox');
+                    box.classList.remove('need'); void box.offsetWidth; box.classList.add('need');
+                    box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    showToast('📎 กรุณาโอนเงินให้ครบตามยอด แล้วแนบสลีปก่อนยืนยันออเดอร์', 'error');
+                    return;
+                }
+            }
 
             // 🏪 ออเดอร์ของแต่ละร้านจะถูกเก็บแยกคอลเล็กชันตาม shopId เช่น orders_shop1, orders_shop2
             // เพื่อให้ตรงกับที่หน้าหลังบ้านของแต่ละร้าน (เช่น ...หลังบ้าน.html) อ่านข้อมูลอยู่
@@ -352,7 +507,10 @@
                 shopName: shopItems[0].shopName,
                 items: shopItems,
                 price: total,
-                paymentMethod: document.querySelector('input[name="payMethod"]:checked').value, // 'promptpay' หรือ 'cash'
+                paymentMethod: method, // 'promptpay' หรือ 'cash'
+                paymentStatus: method === 'promptpay' ? 'pending_verify' : 'pay_at_shop',
+                expectedAmount: total,
+                ...(method === 'promptpay' ? { slipImage: slipData } : {}),
                 status: "waiting",
                 timestamp: window.serverTimestamp()
             };
